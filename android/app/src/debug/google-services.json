@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264600838171",
+    "project_id": "cercle-bleu-enquetes",
+    "storage_bucket": "cercle-bleu-enquetes.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264600838171:android:66a9f7e0ee63578fe318be",
+        "android_client_info": {
+          "package_name": "com.example.applicationstagepfe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeAkZy6Vby_bxul-f_fDrYEyFvahwD-NE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
