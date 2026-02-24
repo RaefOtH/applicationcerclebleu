@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/terrain_form_service.dart';
+import 'matrice1_home.dart';
 import 'variables_environnementales_page.dart';
 
 class CapturePage extends StatefulWidget {
@@ -19,12 +20,77 @@ class CapturePage extends StatefulWidget {
 
 class _CapturePageState extends State<CapturePage>
     with SingleTickerProviderStateMixin {
+  static const List<String> _especeOptions = [
+    'Belone belone',
+    'Squatina squatina',
+    'Anguilla anguilla',
+    'Mugil sp',
+    'Balistes capriscus',
+    'Lophius piscatorius',
+    'Liza aurata',
+    'Liza aurata',
+    'Hexaplex trunculus',
+    'Boops boops',
+    'Eledone sp',
+    'sphyraena sp',
+    'Loligo vulgaris',
+    'Parapenaeus longirostris',
+    'Squalus acanthias',
+    'Conger conger',
+    'Coryphaena hippurus',
+    'Portunus segnis',
+    'metapenaeus monoceros',
+    'Ariesteomorpha foliacea',
+    'Melicertus kerathurus',
+    'Sparus aurata',
+    'Dentex dentex',
+    'Chelidonichthys lucerna',
+    'Labrus merula',
+    'Lichia amia',
+    'Limanda limanda',
+    'Dicentrachus labrax',
+    'Scomber scombrus',
+    'Lithognathus mormyrus',
+    'Merluccius merluccius',
+    'Epinephlus sp',
+    'Mugil cephalus',
+    'Mugil cephalus',
+    'Oblada melanura',
+    'Umbrina canariensis',
+    'Pagellus erythrinus',
+    'Pagrus pagrus',
+    'Octopus vulgaris',
+    'Raja sp',
+    'Scorpaena scrofa',
+    'Mullus barbatus',
+    'Mullus surmuletus',
+    'Scyliorhinus stellaris',
+    'Zeus faber',
+    'Sardina pilchardus',
+    'sardinella aurita',
+    'Diplodus sargus',
+    'Sarpa salpa',
+    'Trachurus sp',
+    'Sepia officinalis',
+    'Seriola dumerili',
+    'Serranus cabrilla',
+    'Pomatomus saltatrix',
+    'Solea sp',
+    'Diplodus vulgaris',
+    'spicara maena',
+    'Trachinus draco',
+    'Portunus segnis',
+    'Callinectes sapidus',
+  ];
+
   late final Map<String, dynamic> data;
   final TerrainFormService _service = TerrainFormService();
 
+  final _nomCommunCtrl = TextEditingController();
   final _especeCtrl = TextEditingController();
   final _abondanceCtrl = TextEditingController();
   final _poidsCtrl = TextEditingController();
+  String? _selectedEspeceKey;
 
   late AnimationController _waveController;
 
@@ -32,9 +98,11 @@ class _CapturePageState extends State<CapturePage>
   void initState() {
     super.initState();
     data = widget.data;
+    _nomCommunCtrl.text = (data['cap_nomCommun'] ?? '').toString();
     _especeCtrl.text = (data['cap_espece'] ?? '').toString();
     _abondanceCtrl.text = (data['cap_abondance'] ?? '').toString();
     _poidsCtrl.text = (data['cap_poidsTotal'] ?? '').toString();
+    _selectedEspeceKey = _resolveEspeceKey(data['cap_espece']);
 
     _waveController = AnimationController(
       vsync: this,
@@ -44,6 +112,7 @@ class _CapturePageState extends State<CapturePage>
 
   @override
   void dispose() {
+    _nomCommunCtrl.dispose();
     _especeCtrl.dispose();
     _abondanceCtrl.dispose();
     _poidsCtrl.dispose();
@@ -53,9 +122,24 @@ class _CapturePageState extends State<CapturePage>
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
+        hintText: 'Saisir ici...',
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
         filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -70,6 +154,14 @@ class _CapturePageState extends State<CapturePage>
         ),
       );
 
+  String? _resolveEspeceKey(dynamic rawValue) {
+    final value = (rawValue ?? '').toString().trim();
+    if (value.isEmpty) return null;
+    final index = _especeOptions.indexOf(value);
+    if (index < 0) return null;
+    return index.toString();
+  }
+
   void _goNext() {
     _service.updateFormData(widget.formId, data, stepCompleted: 3);
     Navigator.push(
@@ -80,6 +172,15 @@ class _CapturePageState extends State<CapturePage>
           data: data,
         ),
       ),
+    );
+  }
+
+  void _goToTerrainHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => Matrice1Home(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
   }
 
@@ -125,7 +226,7 @@ class _CapturePageState extends State<CapturePage>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToTerrainHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
@@ -139,7 +240,7 @@ class _CapturePageState extends State<CapturePage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 3/5',
+                        '\u00C9tape 3/5',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.85),
                           fontWeight: FontWeight.w600,
@@ -155,23 +256,58 @@ class _CapturePageState extends State<CapturePage>
                     children: [
                       _sectionCard(children: [
                         TextFormField(
-                          controller: _especeCtrl,
-                          decoration: _dec("Espèce (nom scientifique)"),
-                          onChanged: (v) => data['cap_espece'] = v,
+                          controller: _nomCommunCtrl,
+                          decoration: _dec("Nom commun/Local"),
+                          onChanged: (v) {
+                            data['cap_nomCommun'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedEspeceKey,
+                          isExpanded: true,
+                          decoration: _dec("Esp\u00E8ce (nom scientifique)"),
+                          hint: const Text('Choisir...'),
+                          items: List.generate(_especeOptions.length, (index) {
+                            final label = _especeOptions[index];
+                            return DropdownMenuItem<String>(
+                              value: index.toString(),
+                              child: Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }),
+                          onChanged: (key) {
+                            setState(() => _selectedEspeceKey = key);
+                            if (key == null) return;
+                            final selected = _especeOptions[int.parse(key)];
+                            _especeCtrl.text = selected;
+                            data['cap_espece'] = selected;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _abondanceCtrl,
                           decoration: _dec("Abondance (n)"),
                           keyboardType: TextInputType.number,
-                          onChanged: (v) => data['cap_abondance'] = v,
+                          onChanged: (v) {
+                            data['cap_abondance'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _poidsCtrl,
                           decoration: _dec("Poids total (g)"),
                           keyboardType: TextInputType.number,
-                          onChanged: (v) => data['cap_poidsTotal'] = v,
+                          onChanged: (v) {
+                            data['cap_poidsTotal'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                       ]),
                       const SizedBox(height: 20),
@@ -179,7 +315,7 @@ class _CapturePageState extends State<CapturePage>
                         children: [
                           Expanded(
                             child: _OutlineButton(
-                              text: 'Précédent',
+                              text: 'Pr\u00E9c\u00E9dent',
                               icon: Icons.arrow_back,
                               onPressed: () => Navigator.pop(context),
                             ),

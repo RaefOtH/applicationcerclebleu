@@ -1,4 +1,3 @@
-﻿
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -6,6 +5,7 @@ import '../painters/wave_painter.dart';
 import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../utils/auth_debug.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -81,20 +81,28 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() => _loading = true);
     try {
       final cred = await _authService.register(email, password);
+      final user = cred.user;
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'internal-error',
+          message: 'Utilisateur introuvable apres inscription.',
+        );
+      }
       final role = _selectedRole;
       await _userService.createUserProfile(
-        uid: cred.user!.uid,
+        uid: user.uid,
         fullName: fullName,
         email: email,
         role: role,
       );
+      authDebugLog('[Register] uid=${user.uid} role_ecrit_firestore=$role');
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Compte créé avec succès'),
-        ),
-      );
-      Navigator.of(context).pushNamedAndRemoveUntil(
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Compte créé avec succès')));
+      Navigator.pushNamedAndRemoveUntil(
+        context,
         AppRoutes.authGate,
         (route) => false,
       );
@@ -110,10 +118,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,17 +160,14 @@ class _RegisterScreenState extends State<RegisterScreen>
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
-              child: Column(
-                children: [
-                  _buildCard(context),
-                ],
-              ),
+              child: Column(children: [_buildCard(context)]),
             ),
           ),
         ],
       ),
     );
   }
+
   Widget _buildCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -244,6 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
     );
   }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -258,7 +265,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         prefixIcon: Icon(icon, color: const Color(0xFF1E3A8A)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -336,13 +346,9 @@ class _RegisterScreenState extends State<RegisterScreen>
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: _roleChip('chercheur', 'Chercheur'),
-            ),
+            Expanded(child: _roleChip('chercheur', 'Chercheur')),
             const SizedBox(width: 10),
-            Expanded(
-              child: _roleChip('admin', 'Admin'),
-            ),
+            Expanded(child: _roleChip('admin', 'Admin')),
           ],
         ),
       ],
@@ -360,9 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           color: isSelected ? const Color(0xFF00D9D9) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF00D9D9)
-                : Colors.grey.shade300,
+            color: isSelected ? const Color(0xFF00D9D9) : Colors.grey.shade300,
           ),
         ),
         child: Center(

@@ -26,13 +26,17 @@ class AuthService {
       case 'weak-password':
         return 'Mot de passe trop faible.';
       case 'email-already-in-use':
-        return 'Email déjà utilisé.';
+        return 'Cet email est deja utilise.';
       case 'user-not-found':
         return 'Utilisateur introuvable.';
       case 'wrong-password':
         return 'Mot de passe incorrect.';
       case 'invalid-email':
         return 'Email invalide.';
+      case 'network-request-failed':
+        return 'Erreur reseau. Verifiez votre connexion.';
+      case 'too-many-requests':
+        return 'Trop de tentatives. Reessayez plus tard.';
       default:
         return 'Erreur de connexion.';
     }

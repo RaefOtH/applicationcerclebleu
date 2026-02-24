@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/terrain_form_service.dart';
+import 'matrice1_home.dart';
 import 'remarques_page.dart';
 
 class VariablesEnvironnementalesPage extends StatefulWidget {
@@ -21,6 +22,24 @@ class VariablesEnvironnementalesPage extends StatefulWidget {
 class _VariablesEnvironnementalesPageState
     extends State<VariablesEnvironnementalesPage>
     with SingleTickerProviderStateMixin {
+  static const List<String> _substratOptions = [
+    'vase',
+    'sable',
+    'fond dur',
+    'cailloutis et galets',
+    'fond dur et roches',
+    'vases sableuses',
+    'Herbiers (posidonie, Zostère, Cymodocée…)',
+    'algues',
+  ];
+  static const List<String> _profondeurOptions = [
+    "Hors de l'eau",
+    'Nageant juste en dessous de la surface',
+    'Entre 0 et 1 m',
+    'Entre 1 et 3 m',
+    'Supérieure à 3 m',
+  ];
+
   late final Map<String, dynamic> data;
   final TerrainFormService _service = TerrainFormService();
 
@@ -29,6 +48,8 @@ class _VariablesEnvironnementalesPageState
   final _temperatureCtrl = TextEditingController();
   final _oxygeneCtrl = TextEditingController();
   final _saliniteCtrl = TextEditingController();
+  String? _selectedSubstrat;
+  String? _selectedProfondeur;
 
   late AnimationController _waveController;
 
@@ -41,6 +62,9 @@ class _VariablesEnvironnementalesPageState
     _temperatureCtrl.text = (data['env_temperature'] ?? '').toString();
     _oxygeneCtrl.text = (data['env_oxygene'] ?? '').toString();
     _saliniteCtrl.text = (data['env_salinite'] ?? '').toString();
+    _selectedSubstrat = _safeOption(data['env_substrat'], _substratOptions);
+    _selectedProfondeur =
+        _safeOption(data['env_profondeur'], _profondeurOptions);
 
     _waveController = AnimationController(
       vsync: this,
@@ -61,9 +85,24 @@ class _VariablesEnvironnementalesPageState
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
+        hintText: 'Saisir ici...',
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
         filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -78,6 +117,12 @@ class _VariablesEnvironnementalesPageState
         ),
       );
 
+  String? _safeOption(dynamic raw, List<String> options) {
+    final value = (raw ?? '').toString().trim();
+    if (value.isEmpty) return null;
+    return options.contains(value) ? value : null;
+  }
+
   void _goNext() {
     _service.updateFormData(widget.formId, data, stepCompleted: 4);
     Navigator.push(
@@ -85,6 +130,15 @@ class _VariablesEnvironnementalesPageState
       MaterialPageRoute(
         builder: (_) => RemarquesPage(formId: widget.formId, data: data),
       ),
+    );
+  }
+
+  void _goToTerrainHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => Matrice1Home(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
   }
 
@@ -130,21 +184,25 @@ class _VariablesEnvironnementalesPageState
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToTerrainHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Variables environnementales',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                      const Expanded(
+                        child: Text(
+                          'Variables environnementales',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Text(
-                        'Étape 4/5',
+                        '\u00C9tape 4/5',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.85),
                           fontWeight: FontWeight.w600,
@@ -159,42 +217,91 @@ class _VariablesEnvironnementalesPageState
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
                       _sectionCard(children: [
-                        TextFormField(
-                          controller: _substratCtrl,
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedSubstrat,
+                          isExpanded: true,
                           decoration: _dec("Type de substrat"),
-                          onChanged: (v) => data['env_substrat'] = v,
+                          hint: const Text('Choisir...'),
+                          items: _substratOptions
+                              .map(
+                                (item) => DropdownMenuItem<String>(
+                                  value: item,
+                                  child: Text(
+                                    item,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedSubstrat = value);
+                            if (value != null) {
+                              _substratCtrl.text = value;
+                              data['env_substrat'] = value;
+                              _service.scheduleFullDataSave(widget.formId, data);
+                            }
+                          },
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _profondeurCtrl,
-                          decoration: _dec("Profondeur (cm)"),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (v) => data['env_profondeur'] = v,
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedProfondeur,
+                          isExpanded: true,
+                          decoration: _dec("Profondeur"),
+                          hint: const Text('Choisir...'),
+                          items: _profondeurOptions
+                              .map(
+                                (item) => DropdownMenuItem<String>(
+                                  value: item,
+                                  child: Text(
+                                    item,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() => _selectedProfondeur = value);
+                            if (value != null) {
+                              _profondeurCtrl.text = value;
+                              data['env_profondeur'] = value;
+                              _service.scheduleFullDataSave(widget.formId, data);
+                            }
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _temperatureCtrl,
-                          decoration: _dec("Température (°C)"),
+                          decoration: _dec("Temp\u00E9rature (\u00B0C)"),
                           keyboardType:
                               const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (v) => data['env_temperature'] = v,
+                          onChanged: (v) {
+                            data['env_temperature'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _oxygeneCtrl,
-                          decoration: _dec("Oxygène"),
+                          decoration: _dec("Oxyg\u00E8ne"),
                           keyboardType:
                               const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (v) => data['env_oxygene'] = v,
+                          onChanged: (v) {
+                            data['env_oxygene'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _saliniteCtrl,
-                          decoration: _dec("Salinité (psu)"),
+                          decoration: _dec("Salinit\u00E9 (psu)"),
                           keyboardType:
                               const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (v) => data['env_salinite'] = v,
+                          onChanged: (v) {
+                            data['env_salinite'] = v;
+                            _service.scheduleFullDataSave(widget.formId, data);
+                          },
                         ),
                       ]),
                       const SizedBox(height: 20),
@@ -202,7 +309,7 @@ class _VariablesEnvironnementalesPageState
                         children: [
                           Expanded(
                             child: _OutlineButton(
-                              text: 'Précédent',
+                              text: 'Pr\u00E9c\u00E9dent',
                               icon: Icons.arrow_back,
                               onPressed: () => Navigator.pop(context),
                             ),

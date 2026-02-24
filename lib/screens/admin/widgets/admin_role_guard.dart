@@ -44,9 +44,7 @@ class _GuardLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -74,7 +72,7 @@ class _UnauthorizedView extends StatelessWidget {
                 onPressed: () {
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    AppRoutes.authGate,
+                    AppRoutes.login,
                     (route) => false,
                   );
                 },

@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
 import 'dart:async';
 
-import '../routes/app_routes.dart';
+import 'package:flutter/material.dart';
+
+import '../auth/auth_gate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,7 +19,9 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     _timer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, AppRoutes.authGate);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+      );
     });
   }
 
@@ -31,23 +34,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image(
-              image: AssetImage('assets/image/logo.png'),
-              width: 220,
-              height: 220,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(height: 16),
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-          ],
+        child: Image(
+          image: AssetImage('assets/image/logo.png'),
+          width: 250,
+          fit: BoxFit.contain,
         ),
       ),
     );

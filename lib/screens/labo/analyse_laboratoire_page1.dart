@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../painters/wave_painter.dart';
 import '../../services/lab_form_service.dart';
 import 'analyse_crabe_bleu_page2.dart';
+import 'donnees_laboratoire_home.dart';
 
 class AnalyseLaboratoirePage1 extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -62,10 +63,25 @@ class _AnalyseLaboratoirePage1State extends State<AnalyseLaboratoirePage1>
   InputDecoration _dec(String label, {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
+      hintText: 'Saisir ici...',
+      hintStyle: const TextStyle(
+        color: Color(0xFF94A3B8),
+        fontSize: 14,
+      ),
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+      floatingLabelAlignment: FloatingLabelAlignment.start,
+      labelStyle: const TextStyle(
+        color: Color(0xFF1E3A8A),
+        fontWeight: FontWeight.w600,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: Color(0xFF1E3A8A),
+        fontWeight: FontWeight.w700,
+      ),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: const Color(0xFFF8FBFF),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -95,6 +111,7 @@ class _AnalyseLaboratoirePage1State extends State<AnalyseLaboratoirePage1>
           "${picked.year}";
       setState(() => ctrl.text = txt);
       data[key] = txt;
+      _service.scheduleFullDataSave(widget.formId, data);
     }
   }
 
@@ -111,7 +128,10 @@ class _AnalyseLaboratoirePage1State extends State<AnalyseLaboratoirePage1>
       readOnly: readOnly,
       onTap: onTap,
       decoration: _dec(label, suffixIcon: suffixIcon),
-      onChanged: (v) => data[key] = v,
+      onChanged: (v) {
+        data[key] = v;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
   }
 
@@ -142,6 +162,15 @@ class _AnalyseLaboratoirePage1State extends State<AnalyseLaboratoirePage1>
           data: data,
         ),
       ),
+    );
+  }
+
+  void _goToLabHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DonneesLaboratoireHome(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
   }
 
@@ -187,7 +216,7 @@ class _AnalyseLaboratoirePage1State extends State<AnalyseLaboratoirePage1>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToLabHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),

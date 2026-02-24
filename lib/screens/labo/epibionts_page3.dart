@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lab_form_service.dart';
+import 'donnees_laboratoire_home.dart';
 import 'remarques_page4.dart';
 
 class EpibiontsPage3 extends StatefulWidget {
@@ -57,9 +58,24 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
+        hintText: 'Saisir ici...',
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
         filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -78,11 +94,22 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
     required String label,
     required TextEditingController ctrl,
     required String key,
+    int minLines = 1,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextFormField(
       controller: ctrl,
+      minLines: minLines,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      textInputAction:
+          maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
       decoration: _dec(label),
-      onChanged: (v) => data[key] = v,
+      onChanged: (v) {
+        data[key] = v;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
   }
 
@@ -100,6 +127,15 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
           data: data,
         ),
       ),
+    );
+  }
+
+  void _goToLabHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DonneesLaboratoireHome(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
   }
 
@@ -145,7 +181,7 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToLabHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
@@ -185,6 +221,9 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
                             label: "Description epibionts",
                             ctrl: _descCtrl,
                             key: "epibiontesDescription",
+                            minLines: 5,
+                            maxLines: 8,
+                            keyboardType: TextInputType.multiline,
                           ),
                           const SizedBox(height: 12),
                           _field(

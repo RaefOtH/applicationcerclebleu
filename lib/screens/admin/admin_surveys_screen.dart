@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../labo/donnees_laboratoire_home.dart';
-import '../lek/lek_hub_screen.dart';
 import '../terrain/matrice1_home.dart';
 import 'widgets/admin_role_guard.dart';
+import '../../services/firestore_db.dart';
+import '../../services/export_service.dart';
+import '../../utils/csv_columns.dart';
 
 class AdminSurveysScreen extends StatefulWidget {
   const AdminSurveysScreen({super.key});
@@ -14,7 +16,8 @@ class AdminSurveysScreen extends StatefulWidget {
 }
 
 class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirestoreDb.db;
+  final ExportService _exportService = ExportService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
@@ -25,6 +28,8 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   String _selectedType = 'Tous';
+  bool _isExporting = false;
+  int _exportLoaded = 0;
 
   @override
   void initState() {
@@ -53,17 +58,11 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
             .orderBy('updatedAt', descending: true)
             .limit(50)
             .get(),
-        _db
-            .collection('lek_forms')
-            .orderBy('updatedAt', descending: true)
-            .limit(50)
-            .get(),
       ]);
 
       final rawItems = <_SurveyItem>[
         ...snapshots[0].docs.map((d) => _fromDoc('Terrain', d)),
         ...snapshots[1].docs.map((d) => _fromDoc('Labo', d)),
-        ...snapshots[2].docs.map((d) => _fromDoc('LEK', d)),
       ];
 
       final ownerIds = rawItems
@@ -80,14 +79,18 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
         }),
       );
 
-      final merged = rawItems
-          .map((e) => e.copyWith(ownerName: ownerNameMap[e.ownerId] ?? e.ownerId))
-          .toList()
-        ..sort((a, b) {
-          final ad = a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final bd = b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return bd.compareTo(ad);
-        });
+      final merged =
+          rawItems
+              .map(
+                (e) =>
+                    e.copyWith(ownerName: ownerNameMap[e.ownerId] ?? e.ownerId),
+              )
+              .toList()
+            ..sort((a, b) {
+              final ad = a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              final bd = b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+              return bd.compareTo(ad);
+            });
 
       if (!mounted) return;
       setState(() {
@@ -127,7 +130,8 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
         return false;
       }
       if (query.isNotEmpty) {
-        final inText = item.title.toLowerCase().contains(query) ||
+        final inText =
+            item.title.toLowerCase().contains(query) ||
             item.ownerName.toLowerCase().contains(query) ||
             item.location.toLowerCase().contains(query);
         if (!inText) return false;
@@ -142,24 +146,28 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
     String type,
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data();
-    final mapData = _toMap(data['data']);
-    final title = _readString(data, mapData, const ['title', 'name']);
-    final location = _readString(data, mapData, const [
+    final root = doc.data();
+    final mapData = _toMap(root['data']);
+    final title = _readString(root, mapData, const ['title', 'name']);
+    final location = _readString(root, mapData, const [
       'location',
       'place',
       'emplacement',
       'zone',
     ]);
-    final surveyDate = _readDate(data, mapData, const [
+    final surveyDate = _readDate(root, mapData, const [
       'gen_date',
       'dateEnquete',
       'dateReception',
       'date',
     ]);
-    final updatedAt = _asDate(data['updatedAt']) ?? _asDate(data['createdAt']);
-    final status = (data['status']?.toString() ?? 'brouillon').trim();
-    final ownerId = (data['ownerId']?.toString() ?? '').trim();
+    final createdAt = _asDate(root['createdAt']);
+    final updatedAt = _asDate(root['updatedAt']) ?? createdAt;
+    final status = (root['status']?.toString() ?? 'brouillon').trim();
+    final ownerId = (root['ownerId']?.toString() ?? '').trim();
+    final idObservation =
+        (mapData['gen_idObservation'] ?? mapData['idObservation'] ?? '')
+            .toString();
 
     return _SurveyItem(
       id: doc.id,
@@ -167,10 +175,13 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
       title: title.isEmpty ? '$type - ${doc.id.substring(0, 6)}' : title,
       location: location,
       surveyDate: surveyDate,
+      createdAt: createdAt,
       updatedAt: updatedAt,
       status: status,
       ownerId: ownerId,
       ownerName: ownerId,
+      idObservation: idObservation,
+      data: mapData,
     );
   }
 
@@ -286,11 +297,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
       ),
     );
     if (ok != true) return;
-    final col = item.type == 'Terrain'
-        ? 'terrain_forms'
-        : item.type == 'Labo'
-            ? 'lab_forms'
-            : 'lek_forms';
+    final col = item.type == 'Terrain' ? 'terrain_forms' : 'lab_forms';
     await _db.collection(col).doc(item.id).delete();
     if (!mounted) return;
     await _load();
@@ -311,12 +318,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
           builder: (_) => DonneesLaboratoireHome(formId: item.id),
         ),
       );
-      return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => LekHubScreen(formId: item.id)),
-    );
   }
 
   Color _badgeColor(String type) {
@@ -327,6 +329,222 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
         return const Color(0xFF1E3A8A);
       default:
         return const Color(0xFF0E7490);
+    }
+  }
+
+  Future<void> _exportItems({
+    required List<_SurveyItem> items,
+    required bool asPdf,
+    required bool isAll,
+  }) async {
+    if (items.isEmpty || _isExporting) return;
+    setState(() => _isExporting = true);
+    try {
+      final terrain = items.where((e) => e.type == 'Terrain').toList();
+      final labo = items.where((e) => e.type == 'Labo').toList();
+      final tStamp = _exportService.fileStampNow();
+      var firstSaved;
+      if (terrain.isNotEmpty) {
+        final docs = terrain
+            .map(
+              (e) => {
+                'title': e.title,
+                'ownerName': e.ownerName,
+                'status': e.status,
+                'createdAt': e.createdAt,
+                'updatedAt': e.updatedAt,
+                'lastEditedAt': e.updatedAt,
+                'submittedAt': e.status == 'soumis' ? e.updatedAt : null,
+                'data': e.data,
+              },
+            )
+            .toList();
+        final saved = asPdf
+            ? await _exportService.saveBytesToDevice(
+                fileName:
+                    'terrain_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.pdf',
+                bytes: await _exportService.buildPdfFromDocs(
+                  title: 'Export Terrain (Admin)',
+                  docs: docs,
+                  dataKeys: terrainDataKeys,
+                ),
+              )
+            : await _exportService.saveCsvToDevice(
+                fileName:
+                    'terrain_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.csv',
+                csvContent: _exportService.buildCsvFromDocs(
+                  docs: docs,
+                  dataKeys: terrainDataKeys,
+                ),
+              );
+        firstSaved ??= saved;
+      }
+      if (labo.isNotEmpty) {
+        final docs = labo
+            .map(
+              (e) => {
+                'title': e.title,
+                'ownerName': e.ownerName,
+                'status': e.status,
+                'createdAt': e.createdAt,
+                'updatedAt': e.updatedAt,
+                'lastEditedAt': e.updatedAt,
+                'submittedAt': e.status == 'soumis' ? e.updatedAt : null,
+                'data': e.data,
+              },
+            )
+            .toList();
+        final saved = asPdf
+            ? await _exportService.saveBytesToDevice(
+                fileName: 'lab_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.pdf',
+                bytes: await _exportService.buildPdfFromDocs(
+                  title: 'Export Laboratoire (Admin)',
+                  docs: docs,
+                  dataKeys: labDataKeys,
+                ),
+              )
+            : await _exportService.saveCsvToDevice(
+                fileName: 'lab_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.csv',
+                csvContent: _exportService.buildCsvFromDocs(
+                  docs: docs,
+                  dataKeys: labDataKeys,
+                ),
+              );
+        firstSaved ??= saved;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            firstSaved?.savedLocation == 'Fichiers > Cercle Bleu'
+                ? '✅ Enregistre dans Fichiers'
+                : '✅ Enregistre dans Telechargements',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Export impossible: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportLoaded = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _showExportOptions() async {
+    if (_isExporting || _filteredItems.isEmpty) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.table_chart_outlined),
+              title: const Text('Exporter en CSV'),
+              onTap: () => Navigator.pop(context, 'filtered_csv'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Exporter en PDF'),
+              onTap: () => Navigator.pop(context, 'filtered_pdf'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.download_for_offline_outlined),
+              title: const Text('Exporter tout (CSV)'),
+              onTap: () => Navigator.pop(context, 'all_csv'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.download_for_offline),
+              title: const Text('Exporter tout (PDF)'),
+              onTap: () => Navigator.pop(context, 'all_pdf'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Annuler'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'filtered_csv' || choice == 'filtered_pdf') {
+      await _exportItems(
+        items: _filteredItems
+            .where((e) => e.type == 'Terrain' || e.type == 'Labo')
+            .toList(),
+        asPdf: choice == 'filtered_pdf',
+        isAll: false,
+      );
+      return;
+    }
+    setState(() {
+      _isExporting = true;
+      _exportLoaded = 0;
+    });
+    try {
+      final allTerrain = await _exportService.fetchAllDocuments(
+        collection: 'terrain_forms',
+        onProgress: (count) {
+          if (!mounted) return;
+          setState(() => _exportLoaded = count);
+        },
+      );
+      final allLabo = await _exportService.fetchAllDocuments(
+        collection: 'lab_forms',
+        onProgress: (count) {
+          if (!mounted) return;
+          setState(() => _exportLoaded = allTerrain.length + count);
+        },
+      );
+      var allItems = <_SurveyItem>[
+        ...allTerrain.map((d) => _fromDoc('Terrain', d)),
+        ...allLabo.map((d) => _fromDoc('Labo', d)),
+      ];
+      final ownerIds = allItems
+          .map((e) => e.ownerId)
+          .where((e) => e.isNotEmpty)
+          .toSet()
+          .toList();
+      final ownerNameMap = <String, String>{};
+      await Future.wait(
+        ownerIds.map((uid) async {
+          final userDoc = await _db.collection('users').doc(uid).get();
+          final name = (userDoc.data()?['fullName']?.toString() ?? '').trim();
+          ownerNameMap[uid] = name.isEmpty ? uid : name;
+        }),
+      );
+      allItems = allItems
+          .map(
+            (e) => e.copyWith(ownerName: ownerNameMap[e.ownerId] ?? e.ownerId),
+          )
+          .toList();
+      if (!mounted) return;
+      setState(() => _isExporting = false);
+      await _exportItems(
+        items: allItems,
+        asPdf: choice == 'all_pdf',
+        isAll: true,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isExporting = false;
+        _exportLoaded = 0;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Export impossible: $e')));
     }
   }
 
@@ -359,7 +577,10 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                       children: [
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         const Expanded(
@@ -387,7 +608,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     Expanded(
                       child: Container(
                         width: double.infinity,
@@ -409,7 +630,9 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
-                                      color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                      color: const Color(
+                                        0xFF1E3A8A,
+                                      ).withOpacity(0.08),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
@@ -422,21 +645,72 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                   ),
                                   child: Column(
                                     children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '${_filteredItems.length} resultats',
+                                              style: const TextStyle(
+                                                color: Color(0xFF1E3A8A),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          FilledButton.icon(
+                                            onPressed:
+                                                _filteredItems.isEmpty ||
+                                                    _isExporting
+                                                ? null
+                                                : _showExportOptions,
+                                            icon: _isExporting
+                                                ? const SizedBox(
+                                                    width: 14,
+                                                    height: 14,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : const Icon(
+                                                    Icons
+                                                        .file_download_outlined,
+                                                  ),
+                                            label: Text(
+                                              _exportLoaded > 0
+                                                  ? 'Export... $_exportLoaded'
+                                                  : 'Exporter',
+                                            ),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF1E3A8A,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
                                       TextField(
                                         controller: _searchController,
-                                        onChanged: (_) => setState(_applyFilters),
+                                        onChanged: (_) =>
+                                            setState(_applyFilters),
                                         decoration: const InputDecoration(
-                                          labelText: 'Recherche (titre/chercheur/lieu)',
-                                          prefixIcon: Icon(Icons.search_rounded),
+                                          labelText:
+                                              'Recherche (titre/chercheur/lieu)',
+                                          prefixIcon: Icon(
+                                            Icons.search_rounded,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       TextField(
                                         controller: _locationController,
-                                        onChanged: (_) => setState(_applyFilters),
+                                        onChanged: (_) =>
+                                            setState(_applyFilters),
                                         decoration: const InputDecoration(
                                           labelText: 'Filtre emplacement',
-                                          prefixIcon: Icon(Icons.place_outlined),
+                                          prefixIcon: Icon(
+                                            Icons.place_outlined,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -444,14 +718,17 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                         initialValue: _selectedType,
                                         items: const [
                                           DropdownMenuItem(
-                                              value: 'Tous', child: Text('Tous')),
+                                            value: 'Tous',
+                                            child: Text('Tous'),
+                                          ),
                                           DropdownMenuItem(
-                                              value: 'Terrain',
-                                              child: Text('Terrain')),
+                                            value: 'Terrain',
+                                            child: Text('Terrain'),
+                                          ),
                                           DropdownMenuItem(
-                                              value: 'Labo', child: Text('Labo')),
-                                          DropdownMenuItem(
-                                              value: 'LEK', child: Text('LEK')),
+                                            value: 'Labo',
+                                            child: Text('Labo'),
+                                          ),
                                         ],
                                         onChanged: (value) {
                                           setState(() {
@@ -461,8 +738,9 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                         },
                                         decoration: const InputDecoration(
                                           labelText: 'Type',
-                                          prefixIcon:
-                                              Icon(Icons.filter_alt_outlined),
+                                          prefixIcon: Icon(
+                                            Icons.filter_alt_outlined,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -472,13 +750,14 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                             child: OutlinedButton.icon(
                                               onPressed: _pickStart,
                                               icon: const Icon(
-                                                  Icons.date_range_rounded),
+                                                Icons.date_range_rounded,
+                                              ),
                                               label: Text(
                                                 _startDate == null
                                                     ? 'Date debut'
-                                                    : _fmt(_startDate)
-                                                        .split(' ')
-                                                        .first,
+                                                    : _fmt(
+                                                        _startDate,
+                                                      ).split(' ').first,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -487,13 +766,15 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                           Expanded(
                                             child: OutlinedButton.icon(
                                               onPressed: _pickEnd,
-                                              icon: const Icon(Icons.event_rounded),
+                                              icon: const Icon(
+                                                Icons.event_rounded,
+                                              ),
                                               label: Text(
                                                 _endDate == null
                                                     ? 'Date fin'
-                                                    : _fmt(_endDate)
-                                                        .split(' ')
-                                                        .first,
+                                                    : _fmt(
+                                                        _endDate,
+                                                      ).split(' ').first,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -523,142 +804,142 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                 Expanded(
                                   child: _loading
                                       ? const Center(
-                                          child: CircularProgressIndicator())
+                                          child: CircularProgressIndicator(),
+                                        )
                                       : _filteredItems.isEmpty
-                                          ? const Center(
-                                              child:
-                                                  Text('Aucune enquete trouvee'),
-                                            )
-                                          : ListView.builder(
-                                              itemCount: _filteredItems.length,
-                                              itemBuilder: (context, index) {
-                                                final item =
-                                                    _filteredItems[index];
-                                                final badgeColor =
-                                                    _badgeColor(item.type);
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          bottom: 10),
-                                                  child: InkWell(
-                                                    onTap: () => _openHub(item),
+                                      ? const Center(
+                                          child: Text('Aucune enquete trouvee'),
+                                        )
+                                      : ListView.builder(
+                                          itemCount: _filteredItems.length,
+                                          itemBuilder: (context, index) {
+                                            final item = _filteredItems[index];
+                                            final badgeColor = _badgeColor(
+                                              item.type,
+                                            );
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 10,
+                                              ),
+                                              child: InkWell(
+                                                onTap: () => _openHub(item),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            16),
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(12),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                16),
-                                                        border: Border.all(
-                                                          color: const Color(
-                                                                  0xFF1E3A8A)
-                                                              .withOpacity(0.08),
-                                                          width: 1.2,
+                                                          16,
                                                         ),
-                                                      ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF1E3A8A,
+                                                      ).withOpacity(0.08),
+                                                      width: 1.2,
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
                                                         children: [
-                                                          Row(
-                                                            children: [
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .symmetric(
-                                                                  horizontal: 10,
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      10,
                                                                   vertical: 4,
                                                                 ),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: badgeColor
-                                                                      .withOpacity(
-                                                                          0.12),
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              999),
-                                                                ),
-                                                                child: Text(
-                                                                  item.type,
-                                                                  style:
-                                                                      TextStyle(
-                                                                    color:
-                                                                        badgeColor,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
+                                                            decoration: BoxDecoration(
+                                                              color: badgeColor
+                                                                  .withOpacity(
+                                                                    0.12,
                                                                   ),
-                                                                ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    999,
+                                                                  ),
+                                                            ),
+                                                            child: Text(
+                                                              item.type,
+                                                              style: TextStyle(
+                                                                color:
+                                                                    badgeColor,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
                                                               ),
-                                                              const Spacer(),
-                                                              IconButton(
-                                                                onPressed: () =>
-                                                                    _deleteItem(
-                                                                        item),
-                                                                icon: const Icon(
-                                                                  Icons
-                                                                      .delete_outline_rounded,
-                                                                  color: Colors
-                                                                      .redAccent,
-                                                                ),
-                                                                tooltip:
-                                                                    'Supprimer',
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          Text(
-                                                            item.title,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                            style:
-                                                                const TextStyle(
-                                                              color: Color(
-                                                                  0xFF1E3A8A),
-                                                              fontWeight:
-                                                                  FontWeight.w800,
-                                                              fontSize: 16,
                                                             ),
                                                           ),
-                                                          const SizedBox(
-                                                              height: 4),
-                                                          Text(
-                                                            'Chercheur: ${item.ownerName}',
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            'Lieu: ${item.location.isEmpty ? 'N/A' : item.location}',
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            'Date: ${_fmt(item.surveyDate)}',
-                                                          ),
-                                                          Text(
-                                                            'Statut: ${item.status}',
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            'Mis a jour: ${_fmt(item.updatedAt)}',
+                                                          const Spacer(),
+                                                          IconButton(
+                                                            onPressed: () =>
+                                                                _deleteItem(
+                                                                  item,
+                                                                ),
+                                                            icon: const Icon(
+                                                              Icons
+                                                                  .delete_outline_rounded,
+                                                              color: Colors
+                                                                  .redAccent,
+                                                            ),
+                                                            tooltip:
+                                                                'Supprimer',
                                                           ),
                                                         ],
                                                       ),
-                                                    ),
+                                                      Text(
+                                                        item.title,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          color: Color(
+                                                            0xFF1E3A8A,
+                                                          ),
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'Chercheur: ${item.ownerName}',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        'Lieu: ${item.location.isEmpty ? 'N/A' : item.location}',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        'Date: ${_fmt(item.surveyDate)}',
+                                                      ),
+                                                      Text(
+                                                        'Statut: ${item.status}',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        'Mis a jour: ${_fmt(item.updatedAt)}',
+                                                      ),
+                                                    ],
                                                   ),
-                                                );
-                                              },
-                                            ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
                                 ),
                               ],
                             ),
@@ -683,10 +964,13 @@ class _SurveyItem {
   final String title;
   final String location;
   final DateTime? surveyDate;
+  final DateTime? createdAt;
   final DateTime? updatedAt;
   final String status;
   final String ownerId;
   final String ownerName;
+  final String idObservation;
+  final Map<String, dynamic> data;
 
   _SurveyItem({
     required this.id,
@@ -694,10 +978,13 @@ class _SurveyItem {
     required this.title,
     required this.location,
     required this.surveyDate,
+    required this.createdAt,
     required this.updatedAt,
     required this.status,
     required this.ownerId,
     required this.ownerName,
+    required this.idObservation,
+    required this.data,
   });
 
   _SurveyItem copyWith({String? ownerName}) {
@@ -707,10 +994,13 @@ class _SurveyItem {
       title: title,
       location: location,
       surveyDate: surveyDate,
+      createdAt: createdAt,
       updatedAt: updatedAt,
       status: status,
       ownerId: ownerId,
       ownerName: ownerName ?? this.ownerName,
+      idObservation: idObservation,
+      data: data,
     );
   }
 }

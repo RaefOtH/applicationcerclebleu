@@ -1,8 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'firestore_db.dart';
 
 class LabFormService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirestoreDb.db;
+  final Map<String, Timer> _saveTimers = {};
+  static const Duration _writeTimeout = Duration(seconds: 10);
 
   String newFormId() {
     return _db.collection('lab_forms').doc().id;
@@ -17,11 +21,16 @@ class LabFormService {
     if (uid == null) {
       throw StateError('Utilisateur non connecte');
     }
+    final currentUser = FirebaseAuth.instance.currentUser;
     final roleCreateur = await _resolveCreatorRole(uid);
+    final ownerName = await _resolveOwnerName(uid, currentUser?.displayName);
     final docRef = _db.collection('lab_forms').doc(formId);
     await docRef.set({
       'ownerId': uid,
+      'ownerName': ownerName,
+      'role': roleCreateur,
       'roleCreateur': roleCreateur,
+      'type': 'lab',
       'title': title ?? 'Donnees Labo',
       'location': location ?? '',
       'status': 'brouillon',
@@ -30,7 +39,7 @@ class LabFormService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'lastEditedAt': FieldValue.serverTimestamp(),
-    });
+    }).timeout(_writeTimeout);
   }
 
   Future<String> createNewForm({
@@ -42,11 +51,16 @@ class LabFormService {
     if (uid == null) {
       throw StateError('Utilisateur non connecte');
     }
+    final currentUser = FirebaseAuth.instance.currentUser;
     final roleCreateur = await _resolveCreatorRole(uid);
+    final ownerName = await _resolveOwnerName(uid, currentUser?.displayName);
     final docRef = _db.collection('lab_forms').doc();
     final payload = {
       'ownerId': uid,
+      'ownerName': ownerName,
+      'role': roleCreateur,
       'roleCreateur': roleCreateur,
+      'type': 'lab',
       'title': title ?? 'Donnees Labo',
       'location': location ?? '',
       'status': 'brouillon',
@@ -58,7 +72,7 @@ class LabFormService {
     };
     final write = docRef.set(payload);
     if (waitForWrite) {
-      await write;
+      await write.timeout(_writeTimeout);
     }
     return docRef.id;
   }
@@ -70,33 +84,59 @@ class LabFormService {
     return 'chercheur';
   }
 
+  Future<String> _resolveOwnerName(String uid, String? fallbackDisplayName) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    final fullName = doc.data()?['fullName']?.toString().trim() ?? '';
+    if (fullName.isNotEmpty) return fullName;
+    final fallback = (fallbackDisplayName ?? '').trim();
+    if (fallback.isNotEmpty) return fallback;
+    return 'Utilisateur';
+  }
+
   Stream<DocumentSnapshot<Map<String, dynamic>>> watchForm(String formId) {
     return _db.collection('lab_forms').doc(formId).snapshots();
   }
 
   Future<void> updateFormData(
     String formId,
-    Map<String, dynamic> patch, {
+    Map<String, dynamic> fullData, {
     int? stepCompleted,
   }) async {
     final ref = _db.collection('lab_forms').doc(formId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      final currentStep = (snap.data()?['stepCompleted'] ?? 0) as int;
+      final rawStep = snap.data()?['stepCompleted'];
+      final currentStep = rawStep is int
+          ? rawStep
+          : rawStep is num
+              ? rawStep.toInt()
+              : int.tryParse(rawStep?.toString() ?? '') ?? 0;
       final update = <String, dynamic>{
+        'data': Map<String, dynamic>.from(fullData),
         'updatedAt': FieldValue.serverTimestamp(),
         'lastEditedAt': FieldValue.serverTimestamp(),
       };
-      if (patch.isNotEmpty) {
-        for (final entry in patch.entries) {
-          update['data.${entry.key}'] = entry.value;
-        }
-      }
       if (stepCompleted != null) {
         update['stepCompleted'] =
             stepCompleted > currentStep ? stepCompleted : currentStep;
       }
+      print('SAVE FULL DATA lab => ${fullData.length} keys');
       tx.set(ref, update, SetOptions(merge: true));
+    });
+  }
+
+  void scheduleFullDataSave(
+    String formId,
+    Map<String, dynamic> fullData, {
+    int? stepCompleted,
+    Duration delay = const Duration(milliseconds: 500),
+  }) {
+    _saveTimers[formId]?.cancel();
+    _saveTimers[formId] = Timer(delay, () {
+      updateFormData(formId, fullData, stepCompleted: stepCompleted)
+          .catchError((e) {
+        print('SAVE FULL DATA lab failed => $e');
+      });
     });
   }
 
@@ -128,7 +168,7 @@ class LabFormService {
   Future<void> submitForm(String formId) async {
     await _db.collection('lab_forms').doc(formId).set(
       {
-        'status': 'soumise',
+        'status': 'soumis',
         'submittedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       },
@@ -140,3 +180,5 @@ class LabFormService {
     await _db.collection('lab_forms').doc(formId).delete();
   }
 }
+
+

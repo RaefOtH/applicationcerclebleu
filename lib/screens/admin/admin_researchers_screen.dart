@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
+import '../../services/csv_export_service.dart';
 import 'researcher_details_screen.dart';
 import 'widgets/admin_role_guard.dart';
+import '../../services/firestore_db.dart';
 
 class AdminResearchersScreen extends StatefulWidget {
   const AdminResearchersScreen({super.key});
@@ -13,7 +15,8 @@ class AdminResearchersScreen extends StatefulWidget {
 }
 
 class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirestoreDb.db;
+  final CsvExportService _csvService = CsvExportService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _placeController = TextEditingController();
 
@@ -22,6 +25,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
   List<_ResearcherSummary> _filtered = [];
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -59,18 +63,12 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
               .where('ownerId', isEqualTo: doc.id)
               .count()
               .get();
-          final lekCountFuture = _db
-              .collection('lek_forms')
-              .where('ownerId', isEqualTo: doc.id)
-              .count()
-              .get();
 
           final placesFuture = _loadPlacesForResearcher(doc.id);
 
           final counts = await Future.wait([
             terrainCountFuture,
             labCountFuture,
-            lekCountFuture,
           ]);
           final places = await placesFuture;
 
@@ -81,7 +79,6 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
             lastLoginAt: _asDate(data['lastLoginAt']),
             terrainCount: counts[0].count ?? 0,
             labCount: counts[1].count ?? 0,
-            lekCount: counts[2].count ?? 0,
             places: places,
           );
         }),
@@ -111,11 +108,6 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
           .get(),
       _db
           .collection('lab_forms')
-          .where('ownerId', isEqualTo: uid)
-          .limit(20)
-          .get(),
-      _db
-          .collection('lek_forms')
           .where('ownerId', isEqualTo: uid)
           .limit(20)
           .get(),
@@ -150,7 +142,8 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
     final placeQuery = _placeController.text.trim().toLowerCase();
     final filtered = _all.where((summary) {
       if (query.isNotEmpty) {
-        final inText = summary.user.fullName.toLowerCase().contains(query) ||
+        final inText =
+            summary.user.fullName.toLowerCase().contains(query) ||
             summary.user.email.toLowerCase().contains(query);
         if (!inText) return false;
       }
@@ -224,6 +217,57 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
     );
   }
 
+  Future<void> _exportFilteredResearchers() async {
+    if (_filtered.isEmpty || _isExporting) return;
+    setState(() => _isExporting = true);
+    try {
+      final headers = <String>[
+        'uid',
+        'fullName',
+        'email',
+        'phone',
+        'createdAt',
+        'lastLoginAt',
+        'terrainCount',
+        'labCount',
+        'places',
+      ];
+      final rows = _filtered.map((r) {
+        return <String>[
+          r.user.uid,
+          r.user.fullName,
+          r.user.email,
+          r.phone,
+          _csvService.formatDateTimeForCsv(r.createdAt),
+          _csvService.formatDateTimeForCsv(r.lastLoginAt),
+          r.terrainCount.toString(),
+          r.labCount.toString(),
+          r.places.join(' | '),
+        ];
+      }).toList();
+      final csv = _csvService.buildCsvContent(headers: headers, rows: rows);
+      final fileName = 'chercheurs_${_csvService.fileStampNow()}.csv';
+      final saved = await _csvService.saveCsvToDevice(fileName, csv);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            saved.savedLocation == 'Fichiers > Cercle Bleu'
+                ? '✅ Fichier enregistre dans Fichiers'
+                : '✅ Fichier enregistre dans Telechargements',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Export impossible: $e')));
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminRoleGuard(
@@ -253,7 +297,10 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                       children: [
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         const Expanded(
@@ -303,7 +350,9 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
-                                      color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                      color: const Color(
+                                        0xFF1E3A8A,
+                                      ).withOpacity(0.08),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
@@ -316,21 +365,68 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                   ),
                                   child: Column(
                                     children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '${_filtered.length} resultats',
+                                              style: const TextStyle(
+                                                color: Color(0xFF1E3A8A),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          FilledButton.icon(
+                                            onPressed:
+                                                _filtered.isEmpty ||
+                                                    _isExporting
+                                                ? null
+                                                : _exportFilteredResearchers,
+                                            icon: _isExporting
+                                                ? const SizedBox(
+                                                    width: 14,
+                                                    height: 14,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  )
+                                                : const Icon(
+                                                    Icons
+                                                        .file_download_outlined,
+                                                  ),
+                                            label: const Text('Exporter CSV'),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF1E3A8A,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
                                       TextField(
                                         controller: _searchController,
-                                        onChanged: (_) => setState(_applyFilters),
+                                        onChanged: (_) =>
+                                            setState(_applyFilters),
                                         decoration: const InputDecoration(
-                                          labelText: 'Recherche par nom ou email',
-                                          prefixIcon: Icon(Icons.search_rounded),
+                                          labelText:
+                                              'Recherche par nom ou email',
+                                          prefixIcon: Icon(
+                                            Icons.search_rounded,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
                                       TextField(
                                         controller: _placeController,
-                                        onChanged: (_) => setState(_applyFilters),
+                                        onChanged: (_) =>
+                                            setState(_applyFilters),
                                         decoration: const InputDecoration(
                                           labelText: 'Filtre emplacement',
-                                          prefixIcon: Icon(Icons.place_outlined),
+                                          prefixIcon: Icon(
+                                            Icons.place_outlined,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -340,7 +436,8 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                             child: OutlinedButton.icon(
                                               onPressed: _pickStart,
                                               icon: const Icon(
-                                                  Icons.date_range_rounded),
+                                                Icons.date_range_rounded,
+                                              ),
                                               label: Text(
                                                 _startDate == null
                                                     ? 'Cree apres'
@@ -353,7 +450,9 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                           Expanded(
                                             child: OutlinedButton.icon(
                                               onPressed: _pickEnd,
-                                              icon: const Icon(Icons.event_rounded),
+                                              icon: const Icon(
+                                                Icons.event_rounded,
+                                              ),
                                               label: Text(
                                                 _endDate == null
                                                     ? 'Cree avant'
@@ -386,146 +485,150 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                 Expanded(
                                   child: _loading
                                       ? const Center(
-                                          child: CircularProgressIndicator())
+                                          child: CircularProgressIndicator(),
+                                        )
                                       : _filtered.isEmpty
-                                          ? const Center(
-                                              child: Text(
-                                                  'Aucun chercheur trouve'),
-                                            )
-                                          : ListView.builder(
-                                              itemCount: _filtered.length,
-                                              itemBuilder: (context, index) {
-                                                final summary = _filtered[index];
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          bottom: 10),
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              ResearcherDetailsScreen(
+                                      ? const Center(
+                                          child: Text('Aucun chercheur trouve'),
+                                        )
+                                      : ListView.builder(
+                                          itemCount: _filtered.length,
+                                          itemBuilder: (context, index) {
+                                            final summary = _filtered[index];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 10,
+                                              ),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          ResearcherDetailsScreen(
                                                             researcherId:
-                                                                summary.user.uid,
+                                                                summary
+                                                                    .user
+                                                                    .uid,
                                                           ),
-                                                        ),
-                                                      );
-                                                    },
+                                                    ),
+                                                  );
+                                                },
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            16),
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(12),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                16),
-                                                        border: Border.all(
-                                                          color: const Color(
-                                                                  0xFF1E3A8A)
-                                                              .withOpacity(0.08),
-                                                          width: 1.2,
+                                                          16,
                                                         ),
-                                                      ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            summary.user.fullName
-                                                                    .isEmpty
-                                                                ? 'Utilisateur'
-                                                                : summary
-                                                                    .user.fullName,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                            style:
-                                                                const TextStyle(
-                                                              color: Color(
-                                                                  0xFF1E3A8A),
-                                                              fontWeight:
-                                                                  FontWeight.w800,
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 4),
-                                                          Text(
-                                                            summary.user.email,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            'Telephone: ${summary.phone.isEmpty ? 'N/A' : summary.phone}',
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            'Cree le: ${_fmtDate(summary.createdAt)}',
-                                                          ),
-                                                          Text(
-                                                            'Derniere connexion: ${_fmtDate(summary.lastLoginAt)}',
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 8),
-                                                          Wrap(
-                                                            spacing: 8,
-                                                            runSpacing: 8,
-                                                            children: [
-                                                              _chip(
-                                                                'Terrain',
-                                                                summary
-                                                                    .terrainCount,
-                                                              ),
-                                                              _chip(
-                                                                'Labo',
-                                                                summary.labCount,
-                                                              ),
-                                                              _chip(
-                                                                'LEK',
-                                                                summary.lekCount,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          if (summary
-                                                              .places.isNotEmpty) ...[
-                                                            const SizedBox(
-                                                                height: 8),
-                                                            Wrap(
-                                                              spacing: 6,
-                                                              runSpacing: 6,
-                                                              children: summary
-                                                                  .places
-                                                                  .take(4)
-                                                                  .map(
-                                                                    (p) => Chip(
-                                                                      label: Text(
-                                                                        p,
-                                                                        overflow:
-                                                                            TextOverflow.ellipsis,
-                                                                      ),
-                                                                      visualDensity:
-                                                                          VisualDensity.compact,
-                                                                    ),
-                                                                  )
-                                                                  .toList(),
-                                                            ),
-                                                          ],
-                                                        ],
-                                                      ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF1E3A8A,
+                                                      ).withOpacity(0.08),
+                                                      width: 1.2,
                                                     ),
                                                   ),
-                                                );
-                                              },
-                                            ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        summary
+                                                                .user
+                                                                .fullName
+                                                                .isEmpty
+                                                            ? 'Utilisateur'
+                                                            : summary
+                                                                  .user
+                                                                  .fullName,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: const TextStyle(
+                                                          color: Color(
+                                                            0xFF1E3A8A,
+                                                          ),
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        summary.user.email,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        'Telephone: ${summary.phone.isEmpty ? 'N/A' : summary.phone}',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        'Cree le: ${_fmtDate(summary.createdAt)}',
+                                                      ),
+                                                      Text(
+                                                        'Derniere connexion: ${_fmtDate(summary.lastLoginAt)}',
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Wrap(
+                                                        spacing: 8,
+                                                        runSpacing: 8,
+                                                        children: [
+                                                          _chip(
+                                                            'Terrain',
+                                                            summary
+                                                                .terrainCount,
+                                                          ),
+                                                          _chip(
+                                                            'Labo',
+                                                            summary.labCount,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      if (summary
+                                                          .places
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 8,
+                                                        ),
+                                                        Wrap(
+                                                          spacing: 6,
+                                                          runSpacing: 6,
+                                                          children: summary
+                                                              .places
+                                                              .take(4)
+                                                              .map(
+                                                                (p) => Chip(
+                                                                  label: Text(
+                                                                    p,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                  visualDensity:
+                                                                      VisualDensity
+                                                                          .compact,
+                                                                ),
+                                                              )
+                                                              .toList(),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
                                 ),
                               ],
                             ),
@@ -551,7 +654,6 @@ class _ResearcherSummary {
   final DateTime? lastLoginAt;
   final int terrainCount;
   final int labCount;
-  final int lekCount;
   final Set<String> places;
 
   _ResearcherSummary({
@@ -561,7 +663,6 @@ class _ResearcherSummary {
     required this.lastLoginAt,
     required this.terrainCount,
     required this.labCount,
-    required this.lekCount,
     required this.places,
   });
 }

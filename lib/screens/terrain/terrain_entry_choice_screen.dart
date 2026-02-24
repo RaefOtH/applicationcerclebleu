@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 
 import '../../painters/wave_painter.dart';
 import '../../services/terrain_form_service.dart';
@@ -37,7 +39,7 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
   Future<void> _createNew() async {
     setState(() => _loading = true);
     try {
-      final formId = await _service.createNewForm(waitForWrite: false);
+      final formId = await _service.createNewForm(waitForWrite: true);
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -45,6 +47,23 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
           builder: (_) => Matrice1Home(formId: formId),
         ),
       );
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        final msg = e.code == 'not-found'
+            ? "Cloud Firestore non initialise. Cree la base '(default)' dans Firebase Console."
+            : "Erreur Firebase: ${e.message ?? e.code}";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+    } on TimeoutException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Timeout reseau pendant creation du formulaire."),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

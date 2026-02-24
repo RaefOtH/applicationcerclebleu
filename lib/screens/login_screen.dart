@@ -1,11 +1,10 @@
-﻿
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../painters/wave_painter.dart';
 import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
-import '../services/user_service.dart';
+import '../utils/auth_debug.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  final UserService _userService = UserService();
   bool _loading = false;
   late AnimationController _waveController;
 
@@ -41,10 +39,11 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
+
   Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -57,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _loading = true);
     try {
       final cred = await _authService.signIn(email, password);
-      _userService.updateLastLogin(cred.user!.uid).catchError((_) {});
+      authDebugLog('[Login] signIn ok uid=${cred.user?.uid}');
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -113,17 +112,14 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
-              child: Column(
-                children: [
-                  _buildCard(context),
-                ],
-              ),
+              child: Column(children: [_buildCard(context)]),
             ),
           ),
         ],
       ),
     );
   }
+
   Widget _buildCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -189,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -203,7 +200,10 @@ class _LoginScreenState extends State<LoginScreen>
         prefixIcon: Icon(icon, color: const Color(0xFF1E3A8A)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),

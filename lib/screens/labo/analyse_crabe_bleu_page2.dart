@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lab_form_service.dart';
+import 'donnees_laboratoire_home.dart';
 import 'epibionts_page3.dart';
 
 class AnalyseCrabeBleuPage2 extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
+
   const AnalyseCrabeBleuPage2({
     super.key,
     required this.data,
@@ -31,7 +33,9 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
   final _maturiteCtrl = TextEditingController();
   final _cwCtrl = TextEditingController();
   final _clCtrl = TextEditingController();
+  final _epaisseurCCtrl = TextEditingController();
   final _poidsTotalCtrl = TextEditingController();
+  final _poidsEviscereCtrl = TextEditingController();
 
   final _appendGCtrl = TextEditingController();
   final _appendDCtrl = TextEditingController();
@@ -40,6 +44,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
 
   final _poidsGonadesCtrl = TextEditingController();
   final _poidsOeufsCtrl = TextEditingController();
+  final _poidsEstomacCtrl = TextEditingController();
   final _indiceGonadoCtrl = TextEditingController();
   final _poidsSpermathequeCtrl = TextEditingController();
 
@@ -65,7 +70,9 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
     _maturiteCtrl.text = (data['maturite'] ?? '').toString();
     _cwCtrl.text = (data['cw'] ?? '').toString();
     _clCtrl.text = (data['cl'] ?? '').toString();
+    _epaisseurCCtrl.text = (data['epaisseurC'] ?? '').toString();
     _poidsTotalCtrl.text = (data['poidsTotal'] ?? '').toString();
+    _poidsEviscereCtrl.text = (data['poidsEviscere'] ?? '').toString();
 
     _appendGCtrl.text = (data['appendicesGauche'] ?? '').toString();
     _appendDCtrl.text = (data['appendicesDroit'] ?? '').toString();
@@ -74,6 +81,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
 
     _poidsGonadesCtrl.text = (data['poidsGonades'] ?? '').toString();
     _poidsOeufsCtrl.text = (data['poidsOeufs'] ?? '').toString();
+    _poidsEstomacCtrl.text = (data['poidsEstomac'] ?? '').toString();
     _indiceGonadoCtrl.text = (data['indiceGonado'] ?? '').toString();
     _poidsSpermathequeCtrl.text =
         (data['poidsSpermatheque'] ?? '').toString();
@@ -101,7 +109,9 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
     _maturiteCtrl.dispose();
     _cwCtrl.dispose();
     _clCtrl.dispose();
+    _epaisseurCCtrl.dispose();
     _poidsTotalCtrl.dispose();
+    _poidsEviscereCtrl.dispose();
 
     _appendGCtrl.dispose();
     _appendDCtrl.dispose();
@@ -110,6 +120,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
 
     _poidsGonadesCtrl.dispose();
     _poidsOeufsCtrl.dispose();
+    _poidsEstomacCtrl.dispose();
     _indiceGonadoCtrl.dispose();
     _poidsSpermathequeCtrl.dispose();
 
@@ -125,9 +136,24 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
 
   InputDecoration _dec(String label) => InputDecoration(
         labelText: label,
+        hintText: 'Saisir ici...',
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
         filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -158,7 +184,10 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
     return TextFormField(
       controller: ctrl,
       decoration: _dec(label),
-      onChanged: (v) => data[key] = v,
+      onChanged: (v) {
+        data[key] = v;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
   }
 
@@ -172,7 +201,10 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
       decoration: _dec(label),
       keyboardType: TextInputType.number,
       inputFormatters: _intOnly(),
-      onChanged: (v) => data[key] = v,
+      onChanged: (v) {
+        data[key] = v;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
   }
 
@@ -186,7 +218,74 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
       decoration: _dec(label),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: _decimalOnly(),
-      onChanged: (v) => data[key] = v,
+      onChanged: (v) {
+        data[key] = v;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
+    );
+  }
+
+  Widget _fieldDropdown({
+    required String label,
+    required TextEditingController ctrl,
+    required String key,
+    required List<String> items,
+  }) {
+    final current = ctrl.text.trim();
+    final initialValue = items.contains(current) ? current : null;
+    return DropdownButtonFormField<String>(
+      initialValue: initialValue,
+      isExpanded: true,
+      decoration: _dec(label),
+      items: items
+          .map(
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(item, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        final selected = value ?? '';
+        ctrl.text = selected;
+        data[key] = selected;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
+    );
+  }
+
+  Widget _fieldQcFlagDropdown() {
+    const options = ["0=ok", "1=à vérifier", "2=manquant"];
+    final raw = _qcCtrl.text.trim();
+    String? initialValue;
+    if (options.contains(raw)) {
+      initialValue = raw;
+    } else if (raw == '0') {
+      initialValue = "0=ok";
+    } else if (raw == '1') {
+      initialValue = "1=à vérifier";
+    } else if (raw == '2') {
+      initialValue = "2=manquant";
+    }
+
+    return DropdownButtonFormField<String>(
+      initialValue: initialValue,
+      isExpanded: true,
+      decoration: _dec("QC_Flag"),
+      items: options
+          .map(
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(item),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        final selected = value ?? '';
+        _qcCtrl.text = selected;
+        data['qcFlag'] = selected;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
   }
 
@@ -204,6 +303,15 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
           data: data,
         ),
       ),
+    );
+  }
+
+  void _goToLabHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DonneesLaboratoireHome(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
   }
 
@@ -249,19 +357,22 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToLabHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Analyse crabe bleu',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                      const Expanded(
+                        child: Text(
+                          'Analyse crabe bleu',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Text(
                         'Étape 2/4',
                         style: TextStyle(
@@ -278,11 +389,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
                       _sectionCard(children: [
-                        _fieldInt(
-                          label: "QC_Flag (0=OK, 1=à vérifier, 2=manquant)",
-                          ctrl: _qcCtrl,
-                          key: "qcFlag",
-                        ),
+                        _fieldQcFlagDropdown(),
                         const SizedBox(height: 12),
                         _fieldText(
                           label: "Espèce",
@@ -296,22 +403,31 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                           key: "idIndividu",
                         ),
                         const SizedBox(height: 12),
-                        _fieldText(
+                        _fieldDropdown(
                           label: "Sexe",
                           ctrl: _sexeCtrl,
                           key: "sexe",
+                          items: const ["M", "F", "I"],
                         ),
                         const SizedBox(height: 12),
-                        _fieldText(
-                          label: "Stade (juvénile/adulte)",
+                        _fieldDropdown(
+                          label: "Stade",
                           ctrl: _stadeCtrl,
                           key: "stade",
+                          items: const ["juvénile", "adulte"],
                         ),
                         const SizedBox(height: 12),
-                        _fieldText(
+                        _fieldDropdown(
                           label: "Stade de maturité",
                           ctrl: _maturiteCtrl,
                           key: "maturite",
+                          items: const [
+                            "immature",
+                            "rudimentaire",
+                            "maturation",
+                            "mature",
+                            "maturité avancée",
+                          ],
                         ),
                         const SizedBox(height: 12),
                         _fieldDecimal(
@@ -327,9 +443,21 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                         ),
                         const SizedBox(height: 12),
                         _fieldDecimal(
+                          label: "Épaisseur C (mm)",
+                          ctrl: _epaisseurCCtrl,
+                          key: "epaisseurC",
+                        ),
+                        const SizedBox(height: 12),
+                        _fieldDecimal(
                           label: "Poids total",
                           ctrl: _poidsTotalCtrl,
                           key: "poidsTotal",
+                        ),
+                        const SizedBox(height: 12),
+                        _fieldDecimal(
+                          label: "Poids crabe éviscéré (g)",
+                          ctrl: _poidsEviscereCtrl,
+                          key: "poidsEviscere",
                         ),
                       ]),
                       const SizedBox(height: 16),
@@ -352,10 +480,11 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                           key: "pincesManquantes",
                         ),
                         const SizedBox(height: 12),
-                        _fieldText(
+                        _fieldDropdown(
                           label: "Couleur des œufs",
                           ctrl: _couleurOeufsCtrl,
                           key: "couleurOeufs",
+                          items: const ["ST1", "ST2", "ST3"],
                         ),
                       ]),
                       const SizedBox(height: 16),
@@ -373,6 +502,12 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                         ),
                         const SizedBox(height: 12),
                         _fieldDecimal(
+                          label: "Poids de l’estomac (g)",
+                          ctrl: _poidsEstomacCtrl,
+                          key: "poidsEstomac",
+                        ),
+                        const SizedBox(height: 12),
+                        _fieldDecimal(
                           label: "Indice gonadosomatique",
                           ctrl: _indiceGonadoCtrl,
                           key: "indiceGonado",
@@ -386,10 +521,16 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                       ]),
                       const SizedBox(height: 16),
                       _sectionCard(children: [
-                        _fieldText(
+                        _fieldDropdown(
                           label: "Stade de la mue",
                           ctrl: _stadeMueCtrl,
                           key: "stadeMue",
+                          items: const [
+                            "post-mue",
+                            "intermue",
+                            "pré-mue",
+                            "mue",
+                          ],
                         ),
                         const SizedBox(height: 12),
                         _fieldDecimal(
@@ -405,7 +546,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                         ),
                         const SizedBox(height: 12),
                         _fieldDecimal(
-                          label: "Taux des protéines (colonne 2)",
+                          label: "Taux des Hydrates de Carbone",
                           ctrl: _tauxProteines2Ctrl,
                           key: "tauxProteines2",
                         ),

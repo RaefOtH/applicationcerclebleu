@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/terrain_form_service.dart';
+import '../../widgets/app_feedback.dart';
+import 'matrice1_home.dart';
 
 class RemarquesPage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const RemarquesPage({
-    super.key,
-    required this.data,
-    required this.formId,
-  });
+  const RemarquesPage({super.key, required this.data, required this.formId});
 
   @override
   State<RemarquesPage> createState() => _RemarquesPageState();
@@ -49,96 +47,62 @@ class _RemarquesPageState extends State<RemarquesPage>
     super.dispose();
   }
 
-  void _finish() {
+  InputDecoration _dec({
+    required String label,
+    String? hint,
+    bool alignLabelWithHint = false,
+  }) => InputDecoration(
+    labelText: label,
+    hintText: hint ?? 'Saisir ici...',
+    alignLabelWithHint: alignLabelWithHint,
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelAlignment: FloatingLabelAlignment.start,
+    labelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w600,
+    ),
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+    floatingLabelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w700,
+    ),
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+    ),
+  );
+
+  Future<void> _finish() async {
     data['rem_text'] = _remarquesCtrl.text;
     data['rem_pecheurReticent'] = _pecheurReticent;
     data['rem_infoPartielle'] = _infoPartielle;
     data['rem_gpsEstime'] = _gpsEstime;
+    showModernSuccessSnackBar(context);
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "Données complètes",
-          style: TextStyle(
-            color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              children: data.entries.map((e) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          e.key,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E3A8A),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: Text(e.value.toString()),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Fermer"),
-          ),
-        ],
-      ),
+    await Future.delayed(const Duration(milliseconds: 2100));
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => Matrice1Home(formId: widget.formId)),
+      (route) => route.isFirst,
     );
   }
 
-  Future<void> _saveToFirestore() async {
-    data['rem_text'] = _remarquesCtrl.text;
-    data['rem_pecheurReticent'] = _pecheurReticent;
-    data['rem_infoPartielle'] = _infoPartielle;
-    data['rem_gpsEstime'] = _gpsEstime;
-    await _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 5,
+  void _goToTerrainHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => Matrice1Home(formId: widget.formId)),
+      (route) => route.isFirst,
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Données enregistrées')),
-      );
-    }
-  }
-
-  Future<void> _submit() async {
-    data['rem_text'] = _remarquesCtrl.text;
-    data['rem_pecheurReticent'] = _pecheurReticent;
-    data['rem_infoPartielle'] = _infoPartielle;
-    data['rem_gpsEstime'] = _gpsEstime;
-    await _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 5,
-    );
-    await _service.submitForm(widget.formId);
-    if (mounted) {
-      Navigator.pop(context);
-    }
   }
 
   @override
@@ -183,7 +147,7 @@ class _RemarquesPageState extends State<RemarquesPage>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToTerrainHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
@@ -197,7 +161,7 @@ class _RemarquesPageState extends State<RemarquesPage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 5/5',
+                        '\u00C9tape 5/5',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.85),
                           fontWeight: FontWeight.w600,
@@ -211,87 +175,76 @@ class _RemarquesPageState extends State<RemarquesPage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      _sectionCard(children: [
-                        CheckboxListTile(
-                          value: _pecheurReticent,
-                          onChanged: (v) {
-                            setState(() => _pecheurReticent = v ?? false);
-                            data['rem_pecheurReticent'] = _pecheurReticent;
-                          },
-                          title: const Text("Pêcheur réticent"),
-                        ),
-                        CheckboxListTile(
-                          value: _infoPartielle,
-                          onChanged: (v) {
-                            setState(() => _infoPartielle = v ?? false);
-                            data['rem_infoPartielle'] = _infoPartielle;
-                          },
-                          title: const Text("Information partielle"),
-                        ),
-                        CheckboxListTile(
-                          value: _gpsEstime,
-                          onChanged: (v) {
-                            setState(() => _gpsEstime = v ?? false);
-                            data['rem_gpsEstime'] = _gpsEstime;
-                          },
-                          title: const Text("GPS estimé (pas mesuré)"),
-                        ),
-                      ]),
-                      const SizedBox(height: 12),
-                      _sectionCard(children: [
-                        TextFormField(
-                          controller: _remarquesCtrl,
-                          maxLines: 12,
-                          minLines: 6,
-                          decoration: const InputDecoration(
-                            labelText: "Remarques",
-                            hintText:
-                                "Ex: Pêcheur réticent, information partielle, GPS estimé (pas mesuré)...",
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                          onChanged: (v) => data['rem_text'] = v,
-                        ),
-                      ]),
-                      const SizedBox(height: 16),
-                      Row(
+                      _sectionCard(
                         children: [
-                          Expanded(
-                            child: _OutlineButton(
-                              text: 'Précédent',
-                              icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
-                            ),
+                          CheckboxListTile(
+                            value: _pecheurReticent,
+                            onChanged: (v) {
+                              setState(() => _pecheurReticent = v ?? false);
+                              data['rem_pecheurReticent'] = _pecheurReticent;
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
+                            },
+                            title: const Text("P\u00EAcheur r\u00E9ticent"),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _PrimaryGradientButton(
-                              text: 'Enregistrer',
-                              icon: Icons.save_rounded,
-                              onPressed: _saveToFirestore,
+                          CheckboxListTile(
+                            value: _infoPartielle,
+                            onChanged: (v) {
+                              setState(() => _infoPartielle = v ?? false);
+                              data['rem_infoPartielle'] = _infoPartielle;
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
+                            },
+                            title: const Text("Information partielle"),
+                          ),
+                          CheckboxListTile(
+                            value: _gpsEstime,
+                            onChanged: (v) {
+                              setState(() => _gpsEstime = v ?? false);
+                              data['rem_gpsEstime'] = _gpsEstime;
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
+                            },
+                            title: const Text(
+                              "GPS estim\u00E9 (pas mesur\u00E9)",
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      _sectionCard(
                         children: [
-                          Expanded(
-                            child: _PrimaryGradientButton(
-                              text: 'Soumettre',
-                              icon: Icons.send_rounded,
-                              onPressed: _submit,
+                          TextFormField(
+                            controller: _remarquesCtrl,
+                            maxLines: 12,
+                            minLines: 6,
+                            decoration: _dec(
+                              label: "Remarques",
+                              hint:
+                                  "Ex: P\u00EAcheur r\u00E9ticent, information partielle, GPS estim\u00E9 (pas mesur\u00E9)...",
+                              alignLabelWithHint: true,
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _PrimaryGradientButton(
-                              text: 'Terminer',
-                              icon: Icons.check,
-                              onPressed: _finish,
-                            ),
+                            onChanged: (v) {
+                              data['rem_text'] = v;
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
+                            },
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      _PrimaryGradientButton(
+                        text: 'Terminer',
+                        icon: Icons.check,
+                        onPressed: _finish,
                       ),
                     ],
                   ),
@@ -378,43 +331,6 @@ class _PrimaryGradientButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OutlineButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _OutlineButton({
-    required this.text,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: const Color(0xFF1E3A8A)),
-      label: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(
-          color: const Color(0xFF1E3A8A).withOpacity(0.3),
-          width: 1.5,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );
   }

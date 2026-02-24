@@ -1,8 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_user.dart';
+import 'firestore_db.dart';
 
 class UserService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirestoreDb.db;
 
   Future<void> createUserProfile({
     required String uid,
@@ -46,3 +47,5 @@ class UserService {
     );
   }
 }
+
+

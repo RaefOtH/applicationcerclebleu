@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lab_form_service.dart';
+import '../../widgets/app_feedback.dart';
+import 'donnees_laboratoire_home.dart';
 
 class RemarquesPage4 extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const RemarquesPage4({
-    super.key,
-    required this.data,
-    required this.formId,
-  });
+  const RemarquesPage4({super.key, required this.data, required this.formId});
 
   @override
   State<RemarquesPage4> createState() => _RemarquesPage4State();
@@ -41,87 +39,63 @@ class _RemarquesPage4State extends State<RemarquesPage4>
     super.dispose();
   }
 
-  void _terminer() {
-    data['remarques'] = _remarquesCtrl.text;
+  InputDecoration _dec({
+    required String label,
+    String? hint,
+    bool alignLabelWithHint = false,
+  }) => InputDecoration(
+    labelText: label,
+    hintText: hint ?? 'Saisir ici...',
+    alignLabelWithHint: alignLabelWithHint,
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelAlignment: FloatingLabelAlignment.start,
+    labelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w600,
+    ),
+    floatingLabelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w700,
+    ),
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+    ),
+  );
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "Données complètes",
-          style: TextStyle(
-            color: Color(0xFF1E3A8A),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              children: data.entries.map((e) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          e.key,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E3A8A),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: Text(e.value.toString()),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Fermer"),
-          ),
-        ],
+  Future<void> _terminer() async {
+    data['remarques'] = _remarquesCtrl.text;
+    showModernSuccessSnackBar(context);
+
+    await Future.delayed(const Duration(milliseconds: 2100));
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DonneesLaboratoireHome(formId: widget.formId),
       ),
+      (route) => route.isFirst,
     );
   }
 
-  Future<void> _saveToFirestore() async {
-    data['remarques'] = _remarquesCtrl.text;
-    await _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 4,
+  void _goToLabHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DonneesLaboratoireHome(formId: widget.formId),
+      ),
+      (route) => route.isFirst,
     );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Données enregistrées')),
-      );
-    }
-  }
-
-  Future<void> _submit() async {
-    data['remarques'] = _remarquesCtrl.text;
-    await _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 4,
-    );
-    await _service.submitForm(widget.formId);
-    if (mounted) {
-      Navigator.pop(context);
-    }
   }
 
   @override
@@ -166,7 +140,7 @@ class _RemarquesPage4State extends State<RemarquesPage4>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToLabHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
@@ -202,14 +176,16 @@ class _RemarquesPage4State extends State<RemarquesPage4>
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: const Color(0xFF1E3A8A)
-                                    .withOpacity(0.08),
+                                color: const Color(
+                                  0xFF1E3A8A,
+                                ).withOpacity(0.08),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF00D9D9)
-                                      .withOpacity(0.08),
+                                  color: const Color(
+                                    0xFF00D9D9,
+                                  ).withOpacity(0.08),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -220,56 +196,26 @@ class _RemarquesPage4State extends State<RemarquesPage4>
                               maxLines: null,
                               expands: true,
                               textAlignVertical: TextAlignVertical.top,
-                              decoration: InputDecoration(
-                                labelText: "Remarques",
+                              decoration: _dec(
+                                label: 'Remarques',
+                                hint: 'Saisir vos remarques ici...',
                                 alignLabelWithHint: true,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
                               ),
-                              onChanged: (v) => data['remarques'] = v,
+                              onChanged: (v) {
+                                data['remarques'] = v;
+                                _service.scheduleFullDataSave(
+                                  widget.formId,
+                                  data,
+                                );
+                              },
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _OutlineButton(
-                                text: 'Précédent',
-                                icon: Icons.arrow_back,
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _PrimaryGradientButton(
-                                text: 'Enregistrer',
-                                icon: Icons.save_rounded,
-                                onPressed: _saveToFirestore,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _PrimaryGradientButton(
-                                text: 'Soumettre',
-                                icon: Icons.send_rounded,
-                                onPressed: _submit,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _PrimaryGradientButton(
-                                text: 'Terminer',
-                                icon: Icons.check,
-                                onPressed: _terminer,
-                              ),
-                            ),
-                          ],
+                        _PrimaryGradientButton(
+                          text: 'Terminer',
+                          icon: Icons.check,
+                          onPressed: _terminer,
                         ),
                       ],
                     ),
@@ -335,43 +281,6 @@ class _PrimaryGradientButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OutlineButton extends StatelessWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _OutlineButton({
-    required this.text,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: const Color(0xFF1E3A8A)),
-      label: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(
-          color: const Color(0xFF1E3A8A).withOpacity(0.3),
-          width: 1.5,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );
   }

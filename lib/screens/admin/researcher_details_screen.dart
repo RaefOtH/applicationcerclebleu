@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../painters/wave_painter.dart';
+import '../../services/firestore_db.dart';
 import '../labo/donnees_laboratoire_home.dart';
-import '../lek/lek_hub_screen.dart';
 import '../terrain/matrice1_home.dart';
 import 'widgets/admin_role_guard.dart';
 
@@ -12,12 +13,15 @@ class ResearcherDetailsScreen extends StatefulWidget {
   const ResearcherDetailsScreen({super.key, required this.researcherId});
 
   @override
-  State<ResearcherDetailsScreen> createState() => _ResearcherDetailsScreenState();
+  State<ResearcherDetailsScreen> createState() =>
+      _ResearcherDetailsScreenState();
 }
 
-class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen>
+    with SingleTickerProviderStateMixin {
+  final FirebaseFirestore _db = FirestoreDb.db;
   final TextEditingController _placeController = TextEditingController();
+  late final AnimationController _waveController;
 
   bool _loading = true;
   Map<String, dynamic>? _profile;
@@ -29,19 +33,27 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
     _load();
   }
 
   @override
   void dispose() {
     _placeController.dispose();
+    _waveController.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final profileFuture = _db.collection('users').doc(widget.researcherId).get();
+      final profileFuture = _db
+          .collection('users')
+          .doc(widget.researcherId)
+          .get();
       final formsFuture = Future.wait([
         _db
             .collection('terrain_forms')
@@ -55,26 +67,20 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
             .orderBy('updatedAt', descending: true)
             .limit(30)
             .get(),
-        _db
-            .collection('lek_forms')
-            .where('ownerId', isEqualTo: widget.researcherId)
-            .orderBy('updatedAt', descending: true)
-            .limit(30)
-            .get(),
       ]);
 
       final profileDoc = await profileFuture;
       final snapshots = await formsFuture;
 
-      final merged = <_ResearcherFormItem>[
-        ...snapshots[0].docs.map((d) => _fromDoc('Terrain', d)),
-        ...snapshots[1].docs.map((d) => _fromDoc('Labo', d)),
-        ...snapshots[2].docs.map((d) => _fromDoc('LEK', d)),
-      ]..sort((a, b) {
-          final ad = a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final bd = b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return bd.compareTo(ad);
-        });
+      final merged =
+          <_ResearcherFormItem>[
+            ...snapshots[0].docs.map((d) => _fromDoc('Terrain', d)),
+            ...snapshots[1].docs.map((d) => _fromDoc('Labo', d)),
+          ]..sort((a, b) {
+            final ad = a.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bd = b.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bd.compareTo(ad);
+          });
 
       if (!mounted) return;
       setState(() {
@@ -85,7 +91,7 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur de chargement des détails')),
+        const SnackBar(content: Text('Erreur de chargement des details')),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -179,17 +185,16 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
 
   void _applyFilters() {
     final placeQuery = _placeController.text.trim().toLowerCase();
-    final filtered = _allForms.where((item) {
-      if (_startDate != null) {
-        final candidate = item.surveyDate ?? item.updatedAt;
-        if (candidate == null || candidate.isBefore(_startDate!)) return false;
+    _filteredForms = _allForms.where((item) {
+      final candidate = item.surveyDate ?? item.updatedAt;
+      if (_startDate != null &&
+          (candidate == null || candidate.isBefore(_startDate!))) {
+        return false;
       }
-      if (_endDate != null) {
-        final candidate = item.surveyDate ?? item.updatedAt;
-        if (candidate == null ||
-            candidate.isAfter(_endDate!.add(const Duration(days: 1)))) {
-          return false;
-        }
+      if (_endDate != null &&
+          (candidate == null ||
+              candidate.isAfter(_endDate!.add(const Duration(days: 1))))) {
+        return false;
       }
       if (placeQuery.isNotEmpty &&
           !item.location.toLowerCase().contains(placeQuery)) {
@@ -197,7 +202,6 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
       }
       return true;
     }).toList();
-    _filteredForms = filtered;
   }
 
   Future<void> _pickStart() async {
@@ -241,14 +245,11 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
     if (item.type == 'Labo') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => DonneesLaboratoireHome(formId: item.id)),
+        MaterialPageRoute(
+          builder: (_) => DonneesLaboratoireHome(formId: item.id),
+        ),
       );
-      return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => LekHubScreen(formId: item.id)),
-    );
   }
 
   String _fmt(DateTime? value) {
@@ -261,147 +262,343 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen> {
     return '$d/$m/$y $h:$min';
   }
 
+  String _displayRole(String rawRole) {
+    final role = rawRole.trim().toLowerCase();
+    if (role == 'admin') return 'Admin';
+    if (role == 'chercheur') return 'Chercheur';
+    return rawRole.isEmpty ? 'N/A' : rawRole;
+  }
+
   @override
   Widget build(BuildContext context) {
     final fullName = (_profile?['fullName']?.toString() ?? '').trim();
     final email = (_profile?['email']?.toString() ?? '').trim();
-    final phone = (_profile?['phone']?.toString() ?? '').trim();
+    final role = (_profile?['role']?.toString() ?? '').trim();
 
     return AdminRoleGuard(
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Détails chercheur'),
-        ),
-        body: RefreshIndicator(
-          onRefresh: _load,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.08),
-                    width: 1.2,
+        body: Stack(
+          children: [
+            SizedBox(
+              height: 230,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1E3A8A),
+                      Color(0xFF2D4BA8),
+                      Color(0xFF1E3A8A),
+                    ],
                   ),
                 ),
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fullName.isEmpty ? 'Utilisateur' : fullName,
-                            style: const TextStyle(
-                              color: Color(0xFF1E3A8A),
-                              fontSize: 20,
+                child: AnimatedBuilder(
+                  animation: _waveController,
+                  builder: (context, child) => CustomPaint(
+                    painter: WavePainter(
+                      animation: _waveController.value,
+                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      waveHeight: 20,
+                    ),
+                    size: Size.infinite,
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Expanded(
+                          child: Text(
+                            'Details chercheur',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text('Email: ${email.isEmpty ? 'N/A' : email}'),
-                          Text('Téléphone: ${phone.isEmpty ? 'N/A' : phone}'),
-                          Text('UID: ${widget.researcherId}'),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _placeController,
-                            onChanged: (_) => setState(_applyFilters),
-                            decoration: const InputDecoration(
-                              labelText: 'Filtre emplacement',
-                              prefixIcon: Icon(Icons.place_outlined),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _pickStart,
-                                  icon: const Icon(Icons.date_range_rounded),
-                                  label: Text(
-                                    _startDate == null
-                                        ? 'Date début'
-                                        : _fmt(_startDate).split(' ').first,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _pickEnd,
-                                  icon: const Icon(Icons.event_rounded),
-                                  label: Text(
-                                    _endDate == null
-                                        ? 'Date fin'
-                                        : _fmt(_endDate).split(' ').first,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Formulaires récents',
-                style: TextStyle(
-                  color: Color(0xFF1E3A8A),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (!_loading && _filteredForms.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 26),
-                  child: Center(child: Text('Aucun formulaire trouvé')),
-                )
-              else
-                ..._filteredForms.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: InkWell(
-                      onTap: () => _openHub(item),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF1E3A8A).withOpacity(0.08),
-                            width: 1.2,
+                        ),
+                        IconButton(
+                          onPressed: _load,
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            color: Colors.white,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                      ),
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                           children: [
-                            Text(
-                              '${item.type} - ${item.title}',
-                              style: const TextStyle(
+                            _infoCard(
+                              loading: _loading,
+                              fullName: fullName,
+                              email: email,
+                              role: role,
+                            ),
+                            const SizedBox(height: 12),
+                            _filtersCard(),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Formulaires recents',
+                              style: TextStyle(
                                 color: Color(0xFF1E3A8A),
                                 fontWeight: FontWeight.w800,
+                                fontSize: 19,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Lieu: ${item.location.isEmpty ? 'N/A' : item.location}',
-                            ),
-                            Text('Date: ${_fmt(item.surveyDate)}'),
-                            Text('Statut: ${item.status}'),
-                            Text('Mis à jour: ${_fmt(item.updatedAt)}'),
+                            const SizedBox(height: 10),
+                            if (_loading)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 26),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else if (_filteredForms.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 26),
+                                child: Center(
+                                  child: Text('Aucun formulaire trouve'),
+                                ),
+                              )
+                            else
+                              ..._filteredForms.map(_formCard),
                           ],
                         ),
                       ),
                     ),
-                  );
-                }),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoCard({
+    required bool loading,
+    required String fullName,
+    required String email,
+    required String role,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fullName.isEmpty ? 'Utilisateur' : fullName,
+                  style: const TextStyle(
+                    color: Color(0xFF1E3A8A),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Email: ${email.isEmpty ? 'N/A' : email}',
+                  style: const TextStyle(
+                    color: Color(0xFF334155),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _chip(
+                      icon: Icons.verified_user_outlined,
+                      label: _displayRole(role),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _filtersCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _placeController,
+            onChanged: (_) => setState(_applyFilters),
+            decoration: InputDecoration(
+              labelText: 'Filtre emplacement',
+              labelStyle: const TextStyle(color: Color(0xFF1E3A8A)),
+              prefixIcon: const Icon(
+                Icons.place_outlined,
+                color: Color(0xFF1E3A8A),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickStart,
+                  icon: const Icon(Icons.date_range_rounded),
+                  label: Text(
+                    _startDate == null
+                        ? 'Date debut'
+                        : _fmt(_startDate).split(' ').first,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickEnd,
+                  icon: const Icon(Icons.event_rounded),
+                  label: Text(
+                    _endDate == null
+                        ? 'Date fin'
+                        : _fmt(_endDate).split(' ').first,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _formCard(_ResearcherFormItem item) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: () => _openHub(item),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFF1E3A8A).withOpacity(0.08),
+              width: 1.2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _chip(icon: Icons.folder_open_outlined, label: item.type),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF1E3A8A),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text('Lieu: ${item.location.isEmpty ? 'N/A' : item.location}'),
+              Text('Date: ${_fmt(item.surveyDate)}'),
+              Text('Statut: ${item.status}'),
+              Text('Mis a jour: ${_fmt(item.updatedAt)}'),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _chip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF00D9D9).withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF1E3A8A)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF1E3A8A),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

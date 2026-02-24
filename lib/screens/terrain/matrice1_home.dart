@@ -1,9 +1,14 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
+import '../../services/csv_export_service.dart';
+import '../../services/export_service.dart';
+import '../../services/firestore_db.dart';
 import '../../services/terrain_form_service.dart';
+import '../../utils/csv_columns.dart';
 import 'capture_page.dart';
 import 'informations_generales_page.dart';
+import 'remarques_page.dart';
 import 'suivi_page.dart';
 import 'variables_environnementales_page.dart';
 
@@ -18,8 +23,11 @@ class Matrice1Home extends StatefulWidget {
 class _Matrice1HomeState extends State<Matrice1Home>
     with SingleTickerProviderStateMixin {
   final TerrainFormService _service = TerrainFormService();
+  final CsvExportService _csvService = CsvExportService();
+  final ExportService _exportService = ExportService();
   Map<String, dynamic> _data = <String, dynamic>{};
   late AnimationController _waveController;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -37,8 +45,89 @@ class _Matrice1HomeState extends State<Matrice1Home>
   }
 
   void _open(Widget page) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page))
-        .then((_) => setState(() {}));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    ).then((_) => setState(() {}));
+  }
+
+  Future<void> _exportCurrentFormCsv() async {
+    if (widget.formId.trim().isEmpty || _isExporting) return;
+    setState(() => _isExporting = true);
+    try {
+      final doc = await FirestoreDb.db
+          .collection('terrain_forms')
+          .doc(widget.formId)
+          .get();
+      if (!doc.exists || doc.data() == null) {
+        throw StateError('Formulaire introuvable.');
+      }
+      final csv = _csvService.buildCsvFromSingleForm(
+        doc: doc.data()!,
+        dataKeys: terrainDataKeys,
+        headers: const {},
+      );
+      final fileName = 'terrain_form_${_csvService.fileStampNow()}.csv';
+      final saved = await _csvService.saveCsvToDevice(fileName, csv);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            saved.savedLocation == 'Fichiers > Cercle Bleu'
+                ? '✅ CSV enregistre dans Fichiers'
+                : '✅ CSV enregistre dans Telechargements',
+          ),
+        ),
+      );
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Export CSV impossible: $e')));
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _exportCurrentFormPdf() async {
+    if (widget.formId.trim().isEmpty || _isExporting) return;
+    setState(() => _isExporting = true);
+    try {
+      final doc = await FirestoreDb.db
+          .collection('terrain_forms')
+          .doc(widget.formId)
+          .get();
+      if (!doc.exists || doc.data() == null) {
+        throw StateError('Formulaire introuvable.');
+      }
+      final fileName = 'terrain_form_${_csvService.fileStampNow()}.pdf';
+      final bytes = await _exportService.buildPdfFromDocs(
+        title: 'Formulaire Terrain',
+        docs: [doc.data()!],
+        dataKeys: terrainDataKeys,
+      );
+      final saved = await _exportService.saveBytesToDevice(
+        fileName: fileName,
+        bytes: bytes,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            saved.savedLocation == 'Fichiers > Cercle Bleu'
+                ? '✅ PDF enregistré dans Fichiers'
+                : '✅ PDF enregistré dans Téléchargements',
+          ),
+        ),
+      );
+    } on Exception catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Export PDF impossible: $e')));
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   @override
@@ -131,6 +220,29 @@ class _Matrice1HomeState extends State<Matrice1Home>
                 StreamBuilder(
                   stream: _service.watchForm(widget.formId),
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          'Erreur Firestore: ${snapshot.error}',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.only(bottom: 6),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    }
                     if (snapshot.hasData && snapshot.data!.data() != null) {
                       final doc = snapshot.data!.data()!;
                       final map = doc['data'] as Map<String, dynamic>? ?? {};
@@ -154,89 +266,115 @@ class _Matrice1HomeState extends State<Matrice1Home>
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
+                      final topItems = [
+                        _GridItem(
+                          title: 'Informations générales',
+                          icon: Icons.info_outline,
+                          color: const Color(0xFF00D9D9),
+                          onTap: () => _open(
+                            InformationsGeneralesPage(
+                              formId: widget.formId,
+                              data: _data,
+                            ),
+                          ),
+                        ),
+                        _GridItem(
+                          title: 'Suivi',
+                          icon: Icons.assignment_outlined,
+                          color: const Color(0xFF1E3A8A),
+                          onTap: () => _open(
+                            SuiviPage(formId: widget.formId, data: _data),
+                          ),
+                        ),
+                        _GridItem(
+                          title: 'Capture',
+                          icon: Icons.inventory_2_outlined,
+                          color: const Color(0xFF00B8B8),
+                          onTap: () => _open(
+                            CapturePage(formId: widget.formId, data: _data),
+                          ),
+                        ),
+                        _GridItem(
+                          title: 'Variables environnementales',
+                          icon: Icons.eco_outlined,
+                          color: const Color(0xFF2D4BA8),
+                          onTap: () => _open(
+                            VariablesEnvironnementalesPage(
+                              formId: widget.formId,
+                              data: _data,
+                            ),
+                          ),
+                        ),
+                      ];
+                      final remarksItem = _GridItem(
+                        title: 'Remarques',
+                        icon: Icons.sticky_note_2_outlined,
+                        color: const Color(0xFF1E3A8A),
+                        onTap: () => _open(
+                          RemarquesPage(formId: widget.formId, data: _data),
+                        ),
+                      );
+
                       final gridWidth = constraints.maxWidth;
-                      final horizontalPadding = 20.0;
+                      const horizontalPadding = 20.0;
                       final availableWidth =
                           gridWidth - (horizontalPadding * 2);
                       final tileWidth = (availableWidth - 14) / 2;
-                      final tileHeight =
-                          tileWidth < 150 ? 140.0 : (tileWidth * 0.95);
-                      final maxGridHeight = tileHeight * 2 + 14;
+                      final idealTileHeight = tileWidth < 150
+                          ? 130.0
+                          : (tileWidth * 0.86);
+                      final maxTileHeightFromViewport =
+                          (constraints.maxHeight - 26) / 3;
+                      final tileHeight = maxTileHeightFromViewport
+                          .clamp(92.0, idealTileHeight)
+                          .toDouble();
+                      final gridHeight = (tileHeight * 2) + 14;
+                      final remarksWidth = tileWidth * 1.05;
 
                       return Center(
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: availableWidth,
-                            maxHeight: maxGridHeight,
-                          ),
+                          constraints: BoxConstraints(maxWidth: availableWidth),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: GridView.builder(
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                mainAxisExtent: tileHeight,
-                              ),
-                              itemBuilder: (context, index) {
-                                final items = [
-                                  _GridItem(
-                                    title: 'Informations générales',
-                                    icon: Icons.info_outline,
-                                    color: const Color(0xFF00D9D9),
-                                    onTap: () => _open(
-                                      InformationsGeneralesPage(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
-                                    ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: gridHeight,
+                                  child: GridView.builder(
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          mainAxisSpacing: 14,
+                                          crossAxisSpacing: 14,
+                                          mainAxisExtent: tileHeight,
+                                        ),
+                                    itemBuilder: (context, index) {
+                                      final item = topItems[index];
+                                      return _GridButton(
+                                        title: item.title,
+                                        icon: item.icon,
+                                        color: item.color,
+                                        onTap: item.onTap,
+                                      );
+                                    },
+                                    itemCount: topItems.length,
                                   ),
-                                  _GridItem(
-                                    title: 'Suivi',
-                                    icon: Icons.assignment_outlined,
-                                    color: const Color(0xFF1E3A8A),
-                                    onTap: () => _open(
-                                      SuiviPage(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
-                                    ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: remarksWidth,
+                                  height: tileHeight,
+                                  child: _GridButton(
+                                    title: remarksItem.title,
+                                    icon: remarksItem.icon,
+                                    color: remarksItem.color,
+                                    onTap: remarksItem.onTap,
                                   ),
-                                  _GridItem(
-                                    title: 'Capture',
-                                    icon: Icons.inventory_2_outlined,
-                                    color: const Color(0xFF00B8B8),
-                                    onTap: () => _open(
-                                      CapturePage(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
-                                    ),
-                                  ),
-                                  _GridItem(
-                                    title: 'Variables environnementales',
-                                    icon: Icons.eco_outlined,
-                                    color: const Color(0xFF2D4BA8),
-                                    onTap: () => _open(
-                                      VariablesEnvironnementalesPage(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
-                                    ),
-                                  ),
-                                ];
-
-                                final item = items[index];
-                                return _GridButton(
-                                  title: item.title,
-                                  icon: item.icon,
-                                  color: item.color,
-                                  onTap: item.onTap,
-                                );
-                              },
-                              itemCount: 4,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -246,10 +384,64 @@ class _Matrice1HomeState extends State<Matrice1Home>
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  child: _PrimaryGradientButton(
-                    text: 'Retour',
-                    icon: Icons.arrow_back_rounded,
-                    onPressed: () => Navigator.pop(context),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed:
+                              _isExporting || widget.formId.trim().isEmpty
+                              ? null
+                              : _exportCurrentFormCsv,
+                          icon: _isExporting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.file_download_outlined),
+                          label: const Text('Exporter CSV'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E3A8A),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed:
+                              _isExporting || widget.formId.trim().isEmpty
+                              ? null
+                              : _exportCurrentFormPdf,
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          label: const Text('Exporter PDF'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF00B8B8),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: _PrimaryGradientButton(
+                          text: 'Retour',
+                          icon: Icons.arrow_back_rounded,
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -301,8 +493,6 @@ class _GridButtonState extends State<_GridButton> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final iconSize = width < 360 ? 26.0 : (width < 400 ? 28.0 : 30.0);
     return GestureDetector(
       onTapDown: (_) => _setScale(true),
       onTapUp: (_) => _setScale(false),
@@ -311,51 +501,68 @@ class _GridButtonState extends State<_GridButton> {
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 120),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF1E3A8A).withOpacity(0.08),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withOpacity(0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.color.withOpacity(0.12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight < 135;
+            final iconBoxSize = compact ? 44.0 : 52.0;
+            final iconSize = compact ? 24.0 : 28.0;
+            final spacing = compact ? 8.0 : 12.0;
+            final fontSize = compact ? 12.5 : 14.0;
+            return Container(
+              padding: EdgeInsets.all(compact ? 12 : 15),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                  width: 1.5,
                 ),
-                child: Icon(widget.icon, color: widget.color, size: iconSize),
-              ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: Text(
-                  widget.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E3A8A),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withOpacity(0.12),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Container(
+                    width: iconBoxSize,
+                    height: iconBoxSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.color.withOpacity(0.12),
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      color: widget.color,
+                      size: iconSize,
+                    ),
+                  ),
+                  SizedBox(height: spacing),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        widget.title,
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E3A8A),
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -417,4 +624,3 @@ class _PrimaryGradientButton extends StatelessWidget {
     );
   }
 }
-

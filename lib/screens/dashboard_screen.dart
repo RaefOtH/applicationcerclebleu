@@ -1,6 +1,6 @@
-﻿
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -8,9 +8,9 @@ import '../models/app_user.dart';
 import '../painters/wave_painter.dart';
 import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
+import '../services/csv_export_service.dart';
 import '../services/user_service.dart';
 import 'labo/lab_entry_choice_screen.dart';
-import 'lek/lek_entry_choice_screen.dart';
 import 'terrain/terrain_entry_choice_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -30,7 +30,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   final UserService _userService = UserService();
   final AuthService _authService = AuthService();
+  final CsvExportService _csvExportService = CsvExportService();
   AppUser? _userProfile;
+  bool _isExportingCsv = false;
   bool _loadingProfile = false;
   StreamSubscription<AppUser?>? _profileSub;
   late AnimationController _waveController;
@@ -50,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       'date': '08/02/2026',
       'count': 24,
       'status': 'En cours',
-      'color': const Color(0xFF00D9D9)
+      'color': const Color(0xFF00D9D9),
     },
     {
       'id': 2,
@@ -58,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       'date': '07/02/2026',
       'count': 18,
       'status': 'Terminé',
-      'color': const Color(0xFF1E3A8A)
+      'color': const Color(0xFF1E3A8A),
     },
     {
       'id': 3,
@@ -66,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       'date': '05/02/2026',
       'count': 31,
       'status': 'Terminé',
-      'color': const Color(0xFF1E3A8A)
+      'color': const Color(0xFF1E3A8A),
     },
   ];
   final List<Map<String, String>> stats = [
@@ -146,10 +148,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       setState(() => _loadingProfile = false);
     }
   }
+
   void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fonctionnalité à venir')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Fonctionnalité à venir')));
   }
 
   String _formatDateTime(DateTime value) {
@@ -250,12 +253,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.authGate,
+          AppRoutes.login,
           (route) => false,
         );
       }
     }
   }
+
   void _applyFilters() {
     final query = selectedLocation.trim().toLowerCase();
 
@@ -300,6 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (day == null || month == null || year == null) return null;
     return DateTime(year, month, day);
   }
+
   bool _isSameDate(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -319,7 +324,130 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  
+  Future<void> _showExportMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildExportItem(
+                  icon: Icons.map_outlined,
+                  label: 'Exporter Terrain',
+                  onTap: () => _runExport('terrain'),
+                ),
+                _buildExportItem(
+                  icon: Icons.science_outlined,
+                  label: 'Exporter Laboratoire',
+                  onTap: () => _runExport('lab'),
+                ),
+                _buildExportItem(
+                  icon: Icons.dataset_outlined,
+                  label: 'Exporter Tout',
+                  onTap: () => _runExport('all'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Annuler'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildExportItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        tileColor: const Color(0xFFF8FBFF),
+        leading: Icon(icon, color: const Color(0xFF1E3A8A)),
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _runExport(String type) async {
+    Navigator.pop(context);
+    final current = FirebaseAuth.instance.currentUser;
+    if (current == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Utilisateur non connecte.')),
+      );
+      return;
+    }
+    final role = (_userProfile?.role ?? '').trim().toLowerCase();
+    final isAdmin = role == 'admin';
+
+    setState(() => _isExportingCsv = true);
+    try {
+      final file = switch (type) {
+        'terrain' => await _csvExportService.exportTerrainCsv(
+          isAdmin: isAdmin,
+          uid: current.uid,
+        ),
+        'lab' => await _csvExportService.exportLabCsv(
+          isAdmin: isAdmin,
+          uid: current.uid,
+        ),
+        _ => await _csvExportService.exportAllCsv(
+          isAdmin: isAdmin,
+          uid: current.uid,
+        ),
+      };
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('CSV genere: ${file.path}')));
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Export CSV Cercle Bleu');
+    } on StateError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message.toString())));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur pendant export CSV.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isExportingCsv = false);
+      }
+    }
+  }
 
   void _resetFilters() {
     setState(() {
@@ -330,6 +458,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _sortByDateDesc(filteredSurveys);
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final fullName = _safeText(_userProfile?.fullName, 'Utilisateur');
@@ -345,9 +474,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               SliverToBoxAdapter(
                 child: _buildAnimatedHeader(fullName, role, email),
               ),
-              SliverToBoxAdapter(
-                child: _buildStatsSection(),
-              ),
+              SliverToBoxAdapter(child: _buildStatsSection()),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
@@ -414,11 +541,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF1E3A8A),
-                Color(0xFF2D4BA8),
-                Color(0xFF1E3A8A),
-              ],
+              colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8), Color(0xFF1E3A8A)],
             ),
           ),
           child: Stack(
@@ -464,15 +587,51 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: [
                     IconButton(
                       onPressed: _confirmLogout,
-                      icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _isExportingCsv ? null : _showExportMenu,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      padding: EdgeInsets.zero,
+                      icon: _isExportingCsv
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.file_download_outlined,
+                              color: Colors.white,
+                            ),
+                      tooltip: 'Exporter CSV',
                     ),
                     Expanded(
                       child: Center(
-                        child: Text(
-                          _formatDateTime(_currentDateTime),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
-                            fontWeight: FontWeight.w600,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _formatDateTime(_currentDateTime),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ),
@@ -489,6 +648,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                           },
                         );
                       },
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      padding: EdgeInsets.zero,
                       icon: const Icon(
                         Icons.person_outline_rounded,
                         color: Colors.white,
@@ -504,10 +668,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   builder: (context, double value, child) {
                     return Transform.translate(
                       offset: Offset(0, 20 * (1 - value)),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
-                      ),
+                      child: Opacity(opacity: value, child: child),
                     );
                   },
                   child: Column(
@@ -554,10 +715,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   builder: (context, double value, child) {
                     return Transform.scale(
                       scale: 0.8 + (0.2 * value),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
-                      ),
+                      child: Opacity(opacity: value, child: child),
                     );
                   },
                   child: Container(
@@ -619,6 +777,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       ],
     );
   }
+
   Widget _buildStatsSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
@@ -630,12 +789,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               tween: Tween<double>(begin: 0, end: 1),
               curve: Curves.easeOutBack,
               builder: (context, double value, child) {
+                final safeOpacity = value.clamp(0.0, 1.0);
                 return Transform.scale(
                   scale: value,
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
-                  ),
+                  child: Opacity(opacity: safeOpacity, child: child),
                 );
               },
               child: Padding(
@@ -657,8 +814,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       animation: _floatingController,
       builder: (context, child) {
         return Transform.translate(
-          offset:
-              Offset(0, math.sin(_floatingController.value * 2 * math.pi) * 3),
+          offset: Offset(
+            0,
+            math.sin(_floatingController.value * 2 * math.pi) * 3,
+          ),
           child: child,
         );
       },
@@ -720,6 +879,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
   }
+
   Widget _buildSurveyCard(Map<String, dynamic> survey, int index) {
     return TweenAnimationBuilder(
       duration: Duration(milliseconds: 400 + (index * 100)),
@@ -728,10 +888,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       builder: (context, double value, child) {
         return Transform.translate(
           offset: Offset(50 * (1 - value), 0),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+          child: Opacity(opacity: value, child: child),
         );
       },
       child: Container(
@@ -793,10 +950,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF00D9D9)
-                                              .withOpacity(0.15),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
+                                          color: const Color(
+                                            0xFF00D9D9,
+                                          ).withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: const Icon(
                                           Icons.location_on_rounded,
@@ -870,8 +1029,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           decoration: BoxDecoration(
                             border: Border(
                               top: BorderSide(
-                                color: const Color(0xFF1E3A8A)
-                                    .withOpacity(0.08),
+                                color: const Color(
+                                  0xFF1E3A8A,
+                                ).withOpacity(0.08),
                                 width: 1.5,
                               ),
                             ),
@@ -904,8 +1064,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF00D9D9)
-                                      .withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF00D9D9,
+                                  ).withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -928,6 +1089,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
   }
+
   Widget _buildFloatingActionButton() {
     return AnimatedBuilder(
       animation: _pulseController,
@@ -947,10 +1109,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF00D9D9),
-                    Color(0xFF00B8B8),
-                  ],
+                  colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -1007,10 +1166,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
                 const SizedBox(height: 18),
-                _bottomSheetTile(
+                _buildModalButton(
                   icon: Icons.assignment_rounded,
                   label: 'Enquête : Données Terrain',
-                  onTap: () {
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
+                  ),
+                  onPressed: () {
                     Navigator.pop(context);
                     Navigator.push(
                       this.context,
@@ -1020,10 +1182,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-                _bottomSheetTile(
+                const SizedBox(height: 12),
+                _buildModalButton(
                   icon: Icons.science_rounded,
                   label: 'Données laboratoire',
-                  onTap: () {
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8)],
+                  ),
+                  onPressed: () {
                     Navigator.pop(context);
                     Navigator.push(
                       this.context,
@@ -1033,26 +1199,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-                _bottomSheetTile(
-                  icon: Icons.quiz_rounded,
-                  label: 'Questionnaire LEK',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      this.context,
-                      MaterialPageRoute(
-                        builder: (_) => const LekEntryChoiceScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(56),
+                    side: BorderSide(color: Colors.grey.shade300, width: 2),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
                   child: const Text('Annuler'),
@@ -1065,41 +1219,51 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _bottomSheetTile({
+  Widget _buildModalButton({
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required Gradient gradient,
+    required VoidCallback onPressed,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00D9D9).withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          child: Row(
-            children: [
-              Icon(icon, color: const Color(0xFF1E3A8A)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E3A8A),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: 22),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
+              ],
+            ),
           ),
         ),
       ),
