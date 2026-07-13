@@ -10,10 +10,13 @@ import '../../services/stats_service.dart';
 import '../../widgets/app_feedback.dart';
 import '../labo/lab_entry_choice_screen.dart';
 import '../terrain/terrain_entry_choice_screen.dart';
+import 'admin_attachments_screen.dart';
 import 'admin_pdf_template_screen.dart';
 import 'admin_researchers_screen.dart';
 import 'admin_surveys_screen.dart';
 import 'widgets/admin_role_guard.dart';
+
+import '../lek/lek_entry_choice_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   final AppUser? user;
@@ -143,7 +146,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   builder: (context, child) => CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 20,
                     ),
                     size: Size.infinite,
@@ -173,10 +176,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.28),
+                                color: Colors.white.withValues(alpha: 0.28),
                               ),
                             ),
                             child: Text(
@@ -224,7 +227,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                   Text(
                     'Dashboard Admin',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -286,10 +289,12 @@ class _AdminDashboardState extends State<AdminDashboard>
                           if (!owners.any((e) => e.id == _selectedOwnerId)) {
                             _selectedOwnerId = 'Tous';
                           }
-                          if (!places.contains(_selectedPlace))
+                          if (!places.contains(_selectedPlace)) {
                             _selectedPlace = 'Tous';
-                          if (!labs.contains(_selectedLab))
+                          }
+                          if (!labs.contains(_selectedLab)) {
                             _selectedLab = 'Tous';
+                          }
 
                           return SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -309,7 +314,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         BoxShadow(
                                           color: const Color(
                                             0xFF00D9D9,
-                                          ).withOpacity(0.08),
+                                          ).withValues(alpha: 0.08),
                                           blurRadius: 18,
                                           offset: const Offset(0, 8),
                                         ),
@@ -326,7 +331,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   icon: Icons.inventory_2_rounded,
                                   title: 'Gestion des enquêtes',
                                   subtitle:
-                                      'Voir et filtrer toutes les saisies Terrain et Labo',
+                                      'Voir et filtrer toutes les saisies Terrain, Labo et LEK',
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -360,6 +365,20 @@ class _AdminDashboardState extends State<AdminDashboard>
                                     MaterialPageRoute(
                                       builder: (_) =>
                                           const AdminPdfTemplateScreen(),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                _ActionCard(
+                                  icon: Icons.folder_shared_rounded,
+                                  title: 'Dossier Photos et Audio',
+                                  subtitle:
+                                      'Filtrer et telecharger les pieces jointes',
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const AdminAttachmentsScreen(),
                                     ),
                                   ),
                                 ),
@@ -515,7 +534,7 @@ class _AdminFilterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +569,7 @@ class _AdminFilterCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedOwnerId,
+            initialValue: selectedOwnerId,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Chercheur',
@@ -566,7 +585,7 @@ class _AdminFilterCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedPlace,
+            initialValue: selectedPlace,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Port / Zone',
@@ -582,7 +601,7 @@ class _AdminFilterCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedLab,
+            initialValue: selectedLab,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Laboratoire',
@@ -602,6 +621,7 @@ class _AdminFilterCard extends StatelessWidget {
   }
 }
 
+//CreationSection*
 class _CreateSection extends StatelessWidget {
   const _CreateSection();
 
@@ -636,6 +656,15 @@ class _CreateSection extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const LabEntryChoiceScreen()),
           ),
         ),
+        const SizedBox(height: 10),
+        _CreateButton(
+          label: 'Questionnaire LEK',
+          icon: Icons.assignment_rounded,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LekEntryChoiceScreen()),
+          ),
+        ),
       ],
     );
   }
@@ -663,7 +692,7 @@ class _CreateButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.22),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.22),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -723,7 +752,7 @@ class _ActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+          border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -732,7 +761,7 @@ class _ActionCard extends StatelessWidget {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF00D9D9).withOpacity(0.15),
+                color: const Color(0xFF00D9D9).withValues(alpha: 0.15),
               ),
               child: Icon(icon, color: const Color(0xFF1E3A8A)),
             ),
@@ -783,7 +812,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -892,7 +921,7 @@ class _StatsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -943,7 +972,7 @@ class _TopListCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

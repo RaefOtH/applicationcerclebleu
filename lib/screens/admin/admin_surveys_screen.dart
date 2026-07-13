@@ -1,8 +1,10 @@
+import 'package:applicationstagepfe/services/csv_export_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../labo/donnees_laboratoire_home.dart';
 import '../terrain/matrice1_home.dart';
+import '../lek/lek_home.dart';
 import 'widgets/admin_role_guard.dart';
 import '../../services/firestore_db.dart';
 import '../../services/export_service.dart';
@@ -28,6 +30,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   String _selectedType = 'Tous';
+  bool _showFilters = false;
   bool _isExporting = false;
   int _exportLoaded = 0;
 
@@ -58,11 +61,17 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
             .orderBy('updatedAt', descending: true)
             .limit(50)
             .get(),
+        _db
+            .collection('lek_forms')
+            .orderBy('updatedAt', descending: true)
+            .limit(50)
+            .get(),
       ]);
 
       final rawItems = <_SurveyItem>[
         ...snapshots[0].docs.map((d) => _fromDoc('Terrain', d)),
         ...snapshots[1].docs.map((d) => _fromDoc('Labo', d)),
+        ...snapshots[2].docs.map((d) => _fromDoc('LEK', d)),
       ];
 
       final ownerIds = rawItems
@@ -250,6 +259,34 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
     return '$d/$m/$y $h:$min';
   }
 
+  bool get _hasActiveFilters {
+    return _locationController.text.trim().isNotEmpty ||
+        _selectedType != 'Tous' ||
+        _startDate != null ||
+        _endDate != null;
+  }
+
+  Widget _activeChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(label),
+    );
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _locationController.clear();
+      _selectedType = 'Tous';
+      _startDate = null;
+      _endDate = null;
+      _applyFilters();
+    });
+  }
+
   Future<void> _pickStart() async {
     final picked = await showDatePicker(
       context: context,
@@ -297,7 +334,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
       ),
     );
     if (ok != true) return;
-    final col = item.type == 'Terrain' ? 'terrain_forms' : 'lab_forms';
+    final col = item.type == 'terrain' ? 'terrain_forms' : item.type == 'lab' ? 'lab_forms': 'lek_forms';
     await _db.collection(col).doc(item.id).delete();
     if (!mounted) return;
     await _load();
@@ -316,6 +353,14 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => DonneesLaboratoireHome(formId: item.id),
+        ),
+      );
+    }
+    if (item.type == 'LEK') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LekHome(formId: item.id),
         ),
       );
     }
@@ -342,8 +387,9 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
     try {
       final terrain = items.where((e) => e.type == 'Terrain').toList();
       final labo = items.where((e) => e.type == 'Labo').toList();
+      final lek = items.where((e) => e.type == 'LEK').toList();
       final tStamp = _exportService.fileStampNow();
-      var firstSaved;
+      CsvSaveResult? firstSaved;
       if (terrain.isNotEmpty) {
         final docs = terrain
             .map(
@@ -408,6 +454,41 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                 csvContent: _exportService.buildCsvFromDocs(
                   docs: docs,
                   dataKeys: labDataKeys,
+                ),
+              );
+        firstSaved ??= saved;
+      }
+      if (lek.isNotEmpty) {
+        final docs = lek
+            .map(
+              (e) => {
+                'title': e.title,
+                'ownerName': e.ownerName,
+                'status': e.status,
+                'createdAt': e.createdAt,
+                'updatedAt': e.updatedAt,
+                'lastEditedAt': e.updatedAt,
+                'submittedAt': e.status == 'soumis' ? e.updatedAt : null,
+                'data': e.data,
+              },
+            )
+            .toList();
+        final saved = asPdf
+            ? await _exportService.saveBytesToDevice(
+                fileName:
+                    'lek_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.pdf',
+                bytes: await _exportService.buildPdfFromDocs(
+                  title: 'Export LEK (Admin)',
+                  docs: docs,
+                  dataKeys: lekDataKeys,
+                ),
+              )
+            : await _exportService.saveCsvToDevice(
+                fileName:
+                    'lek_forms_${isAll ? 'ALL' : 'filtered'}_$tStamp.csv',
+                csvContent: _exportService.buildCsvFromDocs(
+                  docs: docs,
+                  dataKeys: lekDataKeys,
                 ),
               );
         firstSaved ??= saved;
@@ -481,7 +562,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
     if (choice == 'filtered_csv' || choice == 'filtered_pdf') {
       await _exportItems(
         items: _filteredItems
-            .where((e) => e.type == 'Terrain' || e.type == 'Labo')
+            .where((e) => e.type == 'Terrain' || e.type == 'Labo' || e.type == 'LEK')
             .toList(),
         asPdf: choice == 'filtered_pdf',
         isAll: false,
@@ -507,9 +588,17 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
           setState(() => _exportLoaded = allTerrain.length + count);
         },
       );
+      final allLek = await _exportService.fetchAllDocuments(
+        collection: 'lek_forms',
+        onProgress: (count) {
+          if (!mounted) return;
+          setState(() => _exportLoaded = allLabo.length + count);
+        },
+      );
       var allItems = <_SurveyItem>[
         ...allTerrain.map((d) => _fromDoc('Terrain', d)),
         ...allLabo.map((d) => _fromDoc('Labo', d)),
+        ...allLek.map((d) => _fromDoc('LEK', d)),
       ];
       final ownerIds = allItems
           .map((e) => e.ownerId)
@@ -632,12 +721,12 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                     border: Border.all(
                                       color: const Color(
                                         0xFF1E3A8A,
-                                      ).withOpacity(0.08),
+                                      ).withValues(alpha: 0.08),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.03),
+                                        color: Colors.black.withValues(alpha: 0.03),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -702,100 +791,172 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      TextField(
-                                        controller: _locationController,
-                                        onChanged: (_) =>
-                                            setState(_applyFilters),
-                                        decoration: const InputDecoration(
-                                          labelText: 'Filtre emplacement',
-                                          prefixIcon: Icon(
-                                            Icons.place_outlined,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DropdownButtonFormField<String>(
-                                        initialValue: _selectedType,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'Tous',
-                                            child: Text('Tous'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Terrain',
-                                            child: Text('Terrain'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Labo',
-                                            child: Text('Labo'),
-                                          ),
-                                        ],
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _selectedType = value ?? 'Tous';
-                                            _applyFilters();
-                                          });
-                                        },
-                                        decoration: const InputDecoration(
-                                          labelText: 'Type',
-                                          prefixIcon: Icon(
-                                            Icons.filter_alt_outlined,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
                                       Row(
                                         children: [
-                                          Expanded(
-                                            child: OutlinedButton.icon(
-                                              onPressed: _pickStart,
-                                              icon: const Icon(
-                                                Icons.date_range_rounded,
+                                          FilledButton.icon(
+                                            onPressed: () => setState(
+                                              () =>
+                                                  _showFilters = !_showFilters,
+                                            ),
+                                            icon: Icon(
+                                              _showFilters
+                                                  ? Icons.tune_rounded
+                                                  : Icons.filter_list_rounded,
+                                            ),
+                                            label: const Text('Filtres'),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF1E3A8A,
                                               ),
-                                              label: Text(
-                                                _startDate == null
-                                                    ? 'Date debut'
-                                                    : _fmt(
-                                                        _startDate,
-                                                      ).split(' ').first,
-                                                overflow: TextOverflow.ellipsis,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 8),
-                                          Expanded(
-                                            child: OutlinedButton.icon(
-                                              onPressed: _pickEnd,
-                                              icon: const Icon(
-                                                Icons.event_rounded,
-                                              ),
-                                              label: Text(
-                                                _endDate == null
-                                                    ? 'Date fin'
-                                                    : _fmt(
-                                                        _endDate,
-                                                      ).split(' ').first,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ),
+                                          if (_selectedType != 'Tous')
+                                            _activeChip('Type: $_selectedType'),
+                                          if (_locationController.text
+                                              .trim()
+                                              .isNotEmpty)
+                                            _activeChip('Lieu actif'),
+                                          if (_startDate != null ||
+                                              _endDate != null)
+                                            _activeChip('Periode active'),
                                         ],
                                       ),
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _searchController.clear();
-                                              _locationController.clear();
-                                              _selectedType = 'Tous';
-                                              _startDate = null;
-                                              _endDate = null;
-                                              _applyFilters();
-                                            });
-                                          },
-                                          child: const Text('Reinitialiser'),
+                                      const SizedBox(height: 8),
+                                      AnimatedCrossFade(
+                                        duration: const Duration(
+                                          milliseconds: 180,
                                         ),
+                                        crossFadeState: _showFilters
+                                            ? CrossFadeState.showFirst
+                                            : CrossFadeState.showSecond,
+                                        firstChild: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFF1E3A8A,
+                                              ).withValues(alpha: 0.08),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              TextField(
+                                                controller: _locationController,
+                                                onChanged: (_) =>
+                                                    setState(_applyFilters),
+                                                decoration:
+                                                    const InputDecoration(
+                                                      labelText:
+                                                          'Filtre emplacement',
+                                                      prefixIcon: Icon(
+                                                        Icons.place_outlined,
+                                                      ),
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              DropdownButtonFormField<String>(
+                                                initialValue: _selectedType,
+                                                items: const [
+                                                  DropdownMenuItem(
+                                                    value: 'Tous',
+                                                    child: Text('Tous'),
+                                                  ),
+                                                  DropdownMenuItem(
+                                                    value: 'Terrain',
+                                                    child: Text('Terrain'),
+                                                  ),
+                                                  DropdownMenuItem(
+                                                    value: 'Labo',
+                                                    child: Text('Labo'),
+                                                  ),
+                                                  DropdownMenuItem(
+                                                    value: 'LEK',
+                                                    child: Text('LEK'),
+                                                  ),
+                                                ],
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _selectedType =
+                                                        value ?? 'Tous';
+                                                    _applyFilters();
+                                                  });
+                                                },
+                                                decoration:
+                                                    const InputDecoration(
+                                                      labelText: 'Type',
+                                                      prefixIcon: Icon(
+                                                        Icons
+                                                            .filter_alt_outlined,
+                                                      ),
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: OutlinedButton.icon(
+                                                      onPressed: _pickStart,
+                                                      icon: const Icon(
+                                                        Icons
+                                                            .date_range_rounded,
+                                                      ),
+                                                      label: Text(
+                                                        _startDate == null
+                                                            ? 'Date debut'
+                                                            : _fmt(_startDate)
+                                                                  .split(' ')
+                                                                  .first,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: OutlinedButton.icon(
+                                                      onPressed: _pickEnd,
+                                                      icon: const Icon(
+                                                        Icons.event_rounded,
+                                                      ),
+                                                      label: Text(
+                                                        _endDate == null
+                                                            ? 'Date fin'
+                                                            : _fmt(_endDate)
+                                                                  .split(' ')
+                                                                  .first,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: TextButton(
+                                                  onPressed: _hasActiveFilters
+                                                      ? _resetFilters
+                                                      : null,
+                                                  child: const Text(
+                                                    'Reinitialiser',
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        secondChild: const SizedBox.shrink(),
                                       ),
                                     ],
                                   ),
@@ -838,7 +999,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                                     border: Border.all(
                                                       color: const Color(
                                                         0xFF1E3A8A,
-                                                      ).withOpacity(0.08),
+                                                      ).withValues(alpha: 0.08),
                                                       width: 1.2,
                                                     ),
                                                   ),
@@ -858,8 +1019,8 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color: badgeColor
-                                                                  .withOpacity(
-                                                                    0.12,
+                                                                  .withValues(
+                                                                    alpha: 0.12,
                                                                   ),
                                                               borderRadius:
                                                                   BorderRadius.circular(

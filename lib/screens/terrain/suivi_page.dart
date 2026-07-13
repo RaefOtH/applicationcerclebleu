@@ -8,11 +8,7 @@ import 'matrice1_home.dart';
 class SuiviPage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const SuiviPage({
-    super.key,
-    required this.data,
-    required this.formId,
-  });
+  const SuiviPage({super.key, required this.data, required this.formId});
 
   @override
   State<SuiviPage> createState() => _SuiviPageState();
@@ -20,28 +16,62 @@ class SuiviPage extends StatefulWidget {
 
 class _SuiviPageState extends State<SuiviPage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _enginCodeOptions = [
-    "Senne tournante coulissante : PS",
-    "Chaluts : CH (Crevettier, Mediterranien, GOV, pélagique)",
-    "Filets tournants : FT",
-    "Trémails et maillants combinés : TMC",
-    "Filets maillants dérivants : MD",
-    "Filets maillants encerclants : MEC",
-    "Trémails : TR (poisson, Crevettes, Seiche)",
-    "Filets monofilament : MoFi",
-    "Nasses (casiers) : NC",
-    "Pièges (pierre, gargoulettes, Verveux...) : P",
-    "Autre (préciser)",
+  static const List<String> _typeObservationOptions = [
+    'À bord',
+    'Au port',
+    'Expérimental',
   ];
 
-  static const List<String> _enginTypeOptions = [
-    "chalut",
-    "Monofilament",
-    "combiné",
-    "Trémail",
-    "Filet encerclant",
-    "Nasse",
-    "piége",
+  static const List<_EnginOption> _enginOptions = [
+    _EnginOption(
+      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
+      code: 'CHALUTS',
+      group: 'chalut',
+    ),
+    _EnginOption(
+      label: 'Senne tournante coulissante : PS',
+      code: 'PS',
+      group: 'minimal',
+    ),
+    _EnginOption(
+      label: 'Filets tournants : SUX',
+      code: 'SUX',
+      group: 'minimal',
+    ),
+    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
+    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
+    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
+    _EnginOption(
+      label: 'Trémails et maillants combinés : GTN',
+      code: 'GTN',
+      group: 'comb',
+    ),
+    _EnginOption(
+      label: 'Filets maillants dérivants : GND',
+      code: 'GND',
+      group: 'minimal',
+    ),
+    _EnginOption(
+      label: 'Filets maillants encerclants : GNC',
+      code: 'GNC',
+      group: 'minimal',
+    ),
+    _EnginOption(
+      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
+      code: 'GTR',
+      group: 'tr',
+    ),
+    _EnginOption(
+      label: 'Filets monofilament : MoFi',
+      code: 'MoFi',
+      group: 'mofi',
+    ),
+    _EnginOption(
+      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
+      code: 'FIX',
+      group: 'fix',
+    ),
+    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
   ];
 
   static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
@@ -67,8 +97,10 @@ class _SuiviPageState extends State<SuiviPage>
         'Maille de cul de chalut',
         numeric: true,
       ),
+      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
     ],
-    'Monofilament': const [
+    'mofi': const [
       _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
       _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
       _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
@@ -82,12 +114,11 @@ class _SuiviPageState extends State<SuiviPage>
         'Nbre armements',
         numeric: true,
       ),
-      _ConditionalFieldDef(
-        'suivi_mofi_typeFiletDroit',
-        'Type de filet droit',
-      ),
+      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
+      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
     ],
-    'combiné': const [
+    'comb': const [
       _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
       _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
       _ConditionalFieldDef(
@@ -110,12 +141,11 @@ class _SuiviPageState extends State<SuiviPage>
         'Nbre armements',
         numeric: true,
       ),
-      _ConditionalFieldDef(
-        'suivi_comb_typeFiletDroit',
-        'Type de filet droit',
-      ),
+      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
+      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
     ],
-    'Trémail': const [
+    'tr': const [
       _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
       _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
       _ConditionalFieldDef(
@@ -139,15 +169,21 @@ class _SuiviPageState extends State<SuiviPage>
         numeric: true,
       ),
       _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
+      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
     ],
-    'Filet encerclant': const [
+    'fenc': const [
       _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
       _ConditionalFieldDef(
         'suivi_fenc_hauteurChute',
         'Hauteur (chute)',
         numeric: true,
       ),
-      _ConditionalFieldDef('suivi_fenc_mailleAile', 'Maille aile', numeric: true),
+      _ConditionalFieldDef(
+        'suivi_fenc_mailleAile',
+        'Maille aile',
+        numeric: true,
+      ),
       _ConditionalFieldDef(
         'suivi_fenc_maillePoche',
         'Maille poche',
@@ -157,26 +193,40 @@ class _SuiviPageState extends State<SuiviPage>
         'suivi_fenc_typeFiletTournant',
         'Type de filet tournant',
       ),
+      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
     ],
-    'Nasse': const [
-      _ConditionalFieldDef('suivi_nc_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_nc_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_nc_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_nc_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_nc_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_nc_typeNasses', 'Type des nasses'),
+    'fix': const [
+      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
+      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
+      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
+      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
+      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
+      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
+      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
     ],
-    'piége': const [
-      _ConditionalFieldDef('suivi_p_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_p_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_p_typePieges', 'Type des pièges'),
+    'minimal': const [
+      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
+      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
     ],
+  };
+
+  static final Set<String> _legacyConditionalKeys = {
+    'suivi_nc_diametre',
+    'suivi_nc_hauteur',
+    'suivi_nc_ouverture',
+    'suivi_nc_maille',
+    'suivi_nc_nbre',
+    'suivi_nc_typeNasses',
+    'suivi_p_diametre',
+    'suivi_p_nbre',
+    'suivi_p_typePieges',
   };
 
   late final Map<String, dynamic> data;
   final TerrainFormService _service = TerrainFormService();
 
-  final _typeObservationCtrl = TextEditingController();
   final _typeEnginAutreCtrl = TextEditingController();
   final _nbPiecesCtrl = TextEditingController();
   final _idNavireCtrl = TextEditingController();
@@ -184,8 +234,8 @@ class _SuiviPageState extends State<SuiviPage>
   final _debutCtrl = TextEditingController();
   final _finCtrl = TextEditingController();
   final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedEnginCode;
-  String? _selectedEnginType;
+  String? _selectedTypeObservation;
+  _EnginOption? _selectedEnginOption;
 
   late AnimationController _waveController;
 
@@ -193,23 +243,27 @@ class _SuiviPageState extends State<SuiviPage>
   void initState() {
     super.initState();
     data = widget.data;
-    _typeObservationCtrl.text =
-        (data['suivi_typeObservation'] ?? '').toString();
+    _selectedTypeObservation = _safeOption(
+      data['suivi_typeObservation'],
+      _typeObservationOptions,
+    );
     _typeEnginAutreCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
     _nbPiecesCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
     _idNavireCtrl.text = (data['suivi_idNavire'] ?? '').toString();
     _idNasseCtrl.text = (data['suivi_idNasse'] ?? '').toString();
     _debutCtrl.text = (data['suivi_debut'] ?? '').toString();
     _finCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _selectedEnginCode =
-        _safeOption(data['suivi_typeEnginCode'], _enginCodeOptions);
-    _selectedEnginType =
-        _safeOption(data['suivi_typeEngin'], _enginTypeOptions);
+
+    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
+    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
+    _selectedEnginOption = _findEnginOption(savedLabel, savedCode);
 
     for (final defs in _conditionalFields.values) {
       for (final def in defs) {
-        _dynamicCtrls[def.key] =
-            TextEditingController(text: (data[def.key] ?? '').toString());
+        _dynamicCtrls.putIfAbsent(
+          def.key,
+          () => TextEditingController(text: (data[def.key] ?? '').toString()),
+        );
       }
     }
 
@@ -221,7 +275,6 @@ class _SuiviPageState extends State<SuiviPage>
 
   @override
   void dispose() {
-    _typeObservationCtrl.dispose();
     _typeEnginAutreCtrl.dispose();
     _nbPiecesCtrl.dispose();
     _idNavireCtrl.dispose();
@@ -235,6 +288,14 @@ class _SuiviPageState extends State<SuiviPage>
     super.dispose();
   }
 
+  _EnginOption? _findEnginOption(String label, String code) {
+    for (final option in _enginOptions) {
+      if (label.isNotEmpty && option.label == label) return option;
+      if (code.isNotEmpty && option.code == code) return option;
+    }
+    return null;
+  }
+
   String? _safeOption(dynamic raw, List<String> options) {
     final value = (raw ?? '').toString().trim();
     if (value.isEmpty) return null;
@@ -242,39 +303,36 @@ class _SuiviPageState extends State<SuiviPage>
   }
 
   InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
-        labelText: label,
-        hintText: 'Saisir ici...',
-        hintStyle: const TextStyle(
-          color: Color(0xFF94A3B8),
-          fontSize: 14,
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        floatingLabelAlignment: FloatingLabelAlignment.start,
-        labelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w600,
-        ),
-        floatingLabelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w700,
-        ),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: const Color(0xFFF8FBFF),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-        ),
-      );
+    labelText: label,
+    hintText: 'Saisir ici...',
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelAlignment: FloatingLabelAlignment.start,
+    labelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w600,
+    ),
+    floatingLabelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w700,
+    ),
+    suffixIcon: suffixIcon,
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+    ),
+  );
 
   Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
     final picked = await showTimePicker(
@@ -290,30 +348,41 @@ class _SuiviPageState extends State<SuiviPage>
     if (picked != null) {
       final hh = picked.hour.toString().padLeft(2, '0');
       final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = "$hh:$mm";
+      final txt = '$hh:$mm';
       setState(() => ctrl.text = txt);
       data[key] = txt;
       _service.scheduleFullDataSave(widget.formId, data);
     }
   }
 
-  void _onTypeEnginChanged(String? value) {
-    setState(() => _selectedEnginType = value);
-    if (value != null) {
-      data['suivi_typeEngin'] = value;
+  void _onTypeEnginChanged(_EnginOption? option) {
+    setState(() => _selectedEnginOption = option);
+    if (option == null) {
+      data.remove('suivi_typeEngin');
+      data.remove('suivi_typeEnginCode');
+    } else {
+      data['suivi_typeEngin'] = option.label;
+      data['suivi_typeEnginCode'] = option.code;
     }
     _clearInactiveConditionalData();
+    if (option == null || option.code != 'AUTRE') {
+      _typeEnginAutreCtrl.clear();
+      data.remove('suivi_typeEnginAutre');
+    }
     _service.scheduleFullDataSave(widget.formId, data);
   }
 
   void _clearInactiveConditionalData() {
-    final activeType = _selectedEnginType;
+    final activeGroup = _selectedEnginOption?.group;
     for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeType) continue;
+      if (entry.key == activeGroup) continue;
       for (final def in entry.value) {
         data.remove(def.key);
         _dynamicCtrls[def.key]?.clear();
       }
+    }
+    for (final key in _legacyConditionalKeys) {
+      data.remove(key);
     }
   }
 
@@ -341,40 +410,18 @@ class _SuiviPageState extends State<SuiviPage>
     );
   }
 
-  String _sectionTitleForType(String type) {
-    switch (type) {
-      case 'chalut':
-        return 'Détails Chalut';
-      case 'Monofilament':
-        return 'Détails Monofilament';
-      case 'combiné':
-        return 'Détails Combiné';
-      case 'Trémail':
-        return 'Détails Trémail';
-      case 'Filet encerclant':
-        return 'Détails Filet encerclant';
-      case 'Nasse':
-        return 'Détails Nasse';
-      case 'piége':
-        return 'Détails Piége';
-      default:
-        return 'Détails';
-    }
-  }
-
   Widget _buildConditionalSection() {
-    final type = _selectedEnginType;
-    if (type == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[type];
+    final group = _selectedEnginOption?.group;
+    if (group == null) return const SizedBox.shrink();
+    final defs = _conditionalFields[group];
     if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-
-    return _sectionCard(
+    return Column(
       children: [
-        Align(
+        const Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            _sectionTitleForType(type),
-            style: const TextStyle(
+            "Détails type d'engin",
+            style: TextStyle(
               color: Color(0xFF1E3A8A),
               fontWeight: FontWeight.w700,
               fontSize: 16,
@@ -390,9 +437,7 @@ class _SuiviPageState extends State<SuiviPage>
             key: def.key,
             numeric: def.numeric,
           );
-          if (index == defs.length - 1) {
-            return widget;
-          }
+          if (index == defs.length - 1) return widget;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: widget,
@@ -403,12 +448,34 @@ class _SuiviPageState extends State<SuiviPage>
   }
 
   void _goNext() {
-    if (_selectedEnginCode == "Autre (préciser)" &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
+    if (_selectedTypeObservation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser l'autre type d'engin.")),
+        const SnackBar(
+          content: Text("Veuillez choisir un type d'observation."),
+        ),
       );
       return;
+    }
+    if (_selectedEnginOption == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
+      );
+      return;
+    }
+    if (_selectedEnginOption!.code == 'AUTRE' &&
+        _typeEnginAutreCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
+      );
+      return;
+    }
+    data['suivi_typeObservation'] = _selectedTypeObservation!;
+    data['suivi_typeEngin'] = _selectedEnginOption!.label;
+    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
+    if (_selectedEnginOption!.code == 'AUTRE') {
+      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
+    } else {
+      data.remove('suivi_typeEnginAutre');
     }
     _service.updateFormData(widget.formId, data, stepCompleted: 2);
     Navigator.push(
@@ -421,9 +488,7 @@ class _SuiviPageState extends State<SuiviPage>
 
   void _goToTerrainHome() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => Matrice1Home(formId: widget.formId),
-      ),
+      MaterialPageRoute(builder: (_) => Matrice1Home(formId: widget.formId)),
       (route) => route.isFirst,
     );
   }
@@ -453,7 +518,7 @@ class _SuiviPageState extends State<SuiviPage>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 18,
                     ),
                     size: Size.infinite,
@@ -484,9 +549,9 @@ class _SuiviPageState extends State<SuiviPage>
                       ),
                       const Spacer(),
                       Text(
-                        '\u00C9tape 2/5',
+                        'Étape 2/5',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -498,128 +563,125 @@ class _SuiviPageState extends State<SuiviPage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      _sectionCard(children: [
-                        _field(
-                          controller: _typeObservationCtrl,
-                          label:
-                              "Type d'observation (\u00E0 bord / au port / exp\u00E9rimental)",
-                          key: 'suivi_typeObservation',
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedEnginCode,
-                          isExpanded: true,
-                          decoration: _dec("Type d'engin (code)"),
-                          hint: const Text('Choisir...'),
-                          items: _enginCodeOptions
-                              .map(
-                                (item) => DropdownMenuItem<String>(
-                                  value: item,
-                                  child: Text(
-                                    item,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                      _sectionCard(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedTypeObservation,
+                            isExpanded: true,
+                            decoration: _dec("Type d'observation"),
+                            hint: const Text('Choisir...'),
+                            items: _typeObservationOptions
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(
+                                      item,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() => _selectedEnginCode = value);
-                            if (value != null) {
-                              data['suivi_typeEnginCode'] = value;
-                              _service.scheduleFullDataSave(widget.formId, data);
-                            }
-                            if (value != "Autre (préciser)") {
-                              _typeEnginAutreCtrl.clear();
-                              data.remove('suivi_typeEnginAutre');
-                              _service.scheduleFullDataSave(widget.formId, data);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        if (_selectedEnginCode == "Autre (préciser)") ...[
-                          _field(
-                            controller: _typeEnginAutreCtrl,
-                            label: "Autre type d'engin (précisez)",
-                            key: 'suivi_typeEnginAutre',
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() => _selectedTypeObservation = value);
+                              if (value == null) {
+                                data.remove('suivi_typeObservation');
+                              } else {
+                                data['suivi_typeObservation'] = value;
+                              }
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
-                        ],
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedEnginType,
-                          isExpanded: true,
-                          decoration: _dec("Type d'engin"),
-                          hint: const Text('Choisir...'),
-                          items: _enginTypeOptions
-                              .map(
-                                (item) => DropdownMenuItem<String>(
-                                  value: item,
-                                  child: Text(
-                                    item,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                          DropdownButtonFormField<_EnginOption>(
+                            initialValue: _selectedEnginOption,
+                            isExpanded: true,
+                            decoration: _dec("Type d'engin"),
+                            hint: const Text('Choisir...'),
+                            items: _enginOptions
+                                .map(
+                                  (option) => DropdownMenuItem<_EnginOption>(
+                                    value: option,
+                                    child: Text(
+                                      option.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: _onTypeEnginChanged,
-                        ),
-                        const SizedBox(height: 12),
-                        _field(
-                          controller: _nbPiecesCtrl,
-                          label: "Nombre de pièces (nasse/filet)",
-                          key: 'suivi_nbPieces',
-                          numeric: true,
-                        ),
-                        const SizedBox(height: 12),
-                        _field(
-                          controller: _idNavireCtrl,
-                          label: "ID du navire (Nom & Immatriculation)",
-                          key: 'suivi_idNavire',
-                        ),
-                        const SizedBox(height: 12),
-                        _field(
-                          controller: _idNasseCtrl,
-                          label: "ID de la nasse",
-                          key: 'suivi_idNasse',
-                          numeric: true,
-                        ),
-                        const SizedBox(height: 12),
-                        _field(
-                          controller: _debutCtrl,
-                          label: "Op\u00E9ration de p\u00EAche - D\u00E9but (24h)",
-                          key: 'suivi_debut',
-                          readOnly: true,
-                          onTap: () => _pickTime24h(_debutCtrl, 'suivi_debut'),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.access_time),
-                            onPressed: () =>
+                                )
+                                .toList(),
+                            onChanged: _onTypeEnginChanged,
+                          ),
+                          if (_selectedEnginOption?.code == 'AUTRE') ...[
+                            const SizedBox(height: 12),
+                            _field(
+                              controller: _typeEnginAutreCtrl,
+                              label: 'Préciser',
+                              key: 'suivi_typeEnginAutre',
+                            ),
+                          ],
+                          if (_selectedEnginOption != null) ...[
+                            const SizedBox(height: 12),
+                            _buildConditionalSection(),
+                          ],
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _nbPiecesCtrl,
+                            label: 'Nombre de pièces (nasse/filet)',
+                            key: 'suivi_nbPieces',
+                            numeric: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _idNavireCtrl,
+                            label: 'ID du navire (Nom & Immatriculation)',
+                            key: 'suivi_idNavire',
+                          ),
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _idNasseCtrl,
+                            label: 'ID de la nasse',
+                            key: 'suivi_idNasse',
+                            numeric: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _debutCtrl,
+                            label: 'Opération de pêche - Début (24h)',
+                            key: 'suivi_debut',
+                            readOnly: true,
+                            onTap: () =>
                                 _pickTime24h(_debutCtrl, 'suivi_debut'),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.access_time),
+                              onPressed: () =>
+                                  _pickTime24h(_debutCtrl, 'suivi_debut'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        _field(
-                          controller: _finCtrl,
-                          label: "Op\u00E9ration de p\u00EAche - Fin (24h)",
-                          key: 'suivi_fin',
-                          readOnly: true,
-                          onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.access_time),
-                            onPressed: () => _pickTime24h(_finCtrl, 'suivi_fin'),
+                          const SizedBox(height: 12),
+                          _field(
+                            controller: _finCtrl,
+                            label: 'Opération de pêche - Fin (24h)',
+                            key: 'suivi_fin',
+                            readOnly: true,
+                            onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.access_time),
+                              onPressed: () =>
+                                  _pickTime24h(_finCtrl, 'suivi_fin'),
+                            ),
                           ),
-                        ),
-                      ]),
-                      if (_selectedEnginType != null) ...[
-                        const SizedBox(height: 16),
-                        _buildConditionalSection(),
-                      ],
+                        ],
+                      ),
                       const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
                             child: _OutlineButton(
-                              text: 'Pr\u00E9c\u00E9dent',
+                              text: 'Précédent',
                               icon: Icons.arrow_back,
                               onPressed: () => Navigator.pop(context),
                             ),
@@ -652,12 +714,12 @@ class _SuiviPageState extends State<SuiviPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.08),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -668,16 +730,24 @@ class _SuiviPageState extends State<SuiviPage>
   }
 }
 
+class _EnginOption {
+  final String label;
+  final String code;
+  final String group;
+
+  const _EnginOption({
+    required this.label,
+    required this.code,
+    required this.group,
+  });
+}
+
 class _ConditionalFieldDef {
   final String key;
   final String label;
   final bool numeric;
 
-  const _ConditionalFieldDef(
-    this.key,
-    this.label, {
-    this.numeric = false,
-  });
+  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
 }
 
 class _PrimaryGradientButton extends StatelessWidget {
@@ -701,7 +771,7 @@ class _PrimaryGradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -761,12 +831,10 @@ class _OutlineButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          color: const Color(0xFF1E3A8A).withOpacity(0.3),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
           width: 1.5,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );

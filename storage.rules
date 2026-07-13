@@ -1,0 +1,69 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && firestore.get(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ).data.role == 'admin';
+    }
+
+    function isTerrainOwner(formId) {
+      return isSignedIn()
+        && firestore.get(
+          /databases/(default)/documents/terrain_forms/$(formId)
+        ).data.ownerId == request.auth.uid;
+    }
+
+    function isLabOwner(formId) {
+      return isSignedIn()
+        && firestore.get(
+          /databases/(default)/documents/lab_forms/$(formId)
+        ).data.ownerId == request.auth.uid;
+    }
+
+    function canAccessForm(formType, formId) {
+      return isAdmin()
+        || (formType == 'terrain' && isTerrainOwner(formId))
+        || (formType == 'lab' && isLabOwner(formId));
+    }
+
+    function isDeleteRequest() {
+      return request.resource == null;
+    }
+
+    function validPhotoType() {
+      return request.resource.contentType in ['image/jpeg', 'image/png'];
+    }
+
+    function validAudioType() {
+      return request.resource.contentType in [
+        'audio/m4a',
+        'audio/mp4',
+        'audio/aac',
+        'audio/mpeg'
+      ];
+    }
+
+    function validTypeByFolder(folder) {
+      return (folder == 'photos' && validPhotoType())
+        || (folder == 'audio' && validAudioType());
+    }
+
+    function validSizeByFolder(folder) {
+      return (folder == 'photos' && request.resource.size <= 10 * 1024 * 1024)
+        || (folder == 'audio' && request.resource.size <= 25 * 1024 * 1024);
+    }
+
+    match /attachments/{formType}/{formId}/{folder}/{fileName} {
+      allow read: if canAccessForm(formType, formId);
+      allow write: if canAccessForm(formType, formId)
+        && (isDeleteRequest()
+          || (validTypeByFolder(folder) && validSizeByFolder(folder)));
+    }
+  }
+}

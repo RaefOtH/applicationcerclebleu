@@ -12,6 +12,8 @@ import '../../widgets/app_feedback.dart';
 import '../labo/lab_entry_choice_screen.dart';
 import '../terrain/terrain_entry_choice_screen.dart';
 
+import '../lek/lek_entry_choice_screen.dart';
+
 class ChercheurDashboard extends StatefulWidget {
   final AppUser? user;
 
@@ -141,7 +143,7 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                 builder: (context, child) => CustomPaint(
                   painter: WavePainter(
                     animation: _waveController.value,
-                    color: const Color(0xFF00D9D9).withOpacity(0.12),
+                    color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                     waveHeight: 20,
                   ),
                   size: Size.infinite,
@@ -171,10 +173,10 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.28),
+                              color: Colors.white.withValues(alpha: 0.28),
                             ),
                           ),
                           child: Text(
@@ -222,7 +224,7 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                 Text(
                   'Bonjour, $fullName',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -273,10 +275,12 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                                 'Tous',
                                 ...(stats?.labOptions ?? const <String>[]),
                               ];
-                              if (!places.contains(_selectedPlace))
+                              if (!places.contains(_selectedPlace)) {
                                 _selectedPlace = 'Tous';
-                              if (!labs.contains(_selectedLab))
+                              }
+                              if (!labs.contains(_selectedLab)) {
                                 _selectedLab = 'Tous';
+                              }
 
                               return SingleChildScrollView(
                                 padding: const EdgeInsets.fromLTRB(
@@ -303,7 +307,7 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                                             BoxShadow(
                                               color: const Color(
                                                 0xFF00D9D9,
-                                              ).withOpacity(0.08),
+                                              ).withValues(alpha: 0.08),
                                               blurRadius: 18,
                                               offset: const Offset(0, 8),
                                             ),
@@ -460,7 +464,7 @@ class _FilterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,7 +499,7 @@ class _FilterCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedPlace,
+            initialValue: selectedPlace,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Port / Zone',
@@ -511,7 +515,7 @@ class _FilterCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedLab,
+            initialValue: selectedLab,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'Laboratoire',
@@ -531,6 +535,7 @@ class _FilterCard extends StatelessWidget {
   }
 }
 
+//CreationSection*
 class _CreateSection extends StatelessWidget {
   const _CreateSection();
 
@@ -565,6 +570,15 @@ class _CreateSection extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const LabEntryChoiceScreen()),
           ),
         ),
+        const SizedBox(height: 10),
+        _CreateButton(
+          label: 'Questionnaire LEK',
+          icon: Icons.assignment_rounded,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LekEntryChoiceScreen()),
+          ),
+        ),
       ],
     );
   }
@@ -592,7 +606,7 @@ class _CreateButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.22),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.22),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -642,7 +656,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -751,7 +765,7 @@ class _StatsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -802,7 +816,7 @@ class _TopListCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

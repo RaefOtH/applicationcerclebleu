@@ -96,7 +96,7 @@ class _AuthGateState extends State<AuthGate> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erreur creation profil: $e')));
+      ).showSnackBar(SnackBar(content: Text('Erreur creation profil : $e')));
     } finally {
       if (mounted) {
         setState(() => _creatingProfile = false);
@@ -113,7 +113,7 @@ class _AuthGateState extends State<AuthGate> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return AlertDialog(
-              title: const Text('Creer profil'),
+              title: const Text('Creer le profil'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -151,7 +151,7 @@ class _AuthGateState extends State<AuthGate> {
                     if (selectedRole == 'admin' &&
                         pinCtrl.text.trim() != '0000') {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('PIN Admin incorrect')),
+                        const SnackBar(content: Text('PIN admin incorrect')),
                       );
                       return;
                     }
@@ -206,7 +206,7 @@ class _AuthGateState extends State<AuthGate> {
                   message: state.message!,
                   primaryLabel: _creatingProfile
                       ? 'Creation...'
-                      : 'Creer profil',
+                      : 'Creer le profil',
                   onPrimary: _creatingProfile
                       ? null
                       : () => _createProfile(user),

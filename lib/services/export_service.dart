@@ -266,7 +266,7 @@ class ExportService {
     final day = d.day.toString().padLeft(2, '0');
     final hh = d.hour.toString().padLeft(2, '0');
     final mm = d.minute.toString().padLeft(2, '0');
-    return '${y}${m}${day}_$hh$mm';
+    return '$y$m${day}_$hh$mm';
   }
 
   Future<CsvSaveResult> _saveAndroid(String fileName, List<int> bytes) async {

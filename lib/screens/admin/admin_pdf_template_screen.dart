@@ -173,7 +173,7 @@ class _AdminPdfTemplateScreenState extends State<AdminPdfTemplateScreen>
                   builder: (context, child) => CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 20,
                     ),
                     size: Size.infinite,
@@ -324,7 +324,7 @@ class _AdminPdfTemplateScreenState extends State<AdminPdfTemplateScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         children: [
@@ -355,7 +355,7 @@ class _AdminPdfTemplateScreenState extends State<AdminPdfTemplateScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

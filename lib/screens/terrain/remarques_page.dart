@@ -130,7 +130,7 @@ class _RemarquesPageState extends State<RemarquesPage>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 18,
                     ),
                     size: Size.infinite,
@@ -163,7 +163,7 @@ class _RemarquesPageState extends State<RemarquesPage>
                       Text(
                         '\u00C9tape 5/5',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -264,12 +264,12 @@ class _RemarquesPageState extends State<RemarquesPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.08),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -301,7 +301,7 @@ class _PrimaryGradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),

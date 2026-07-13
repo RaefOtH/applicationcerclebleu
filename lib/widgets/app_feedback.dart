@@ -8,7 +8,7 @@ Future<bool> showModernLogoutDialog(BuildContext context) async {
     context: context,
     barrierLabel: 'logout_dialog',
     barrierDismissible: true,
-    barrierColor: Colors.black.withOpacity(0.42),
+    barrierColor: Colors.black.withValues(alpha: 0.42),
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (context, animation, secondaryAnimation) {
       return const _LogoutDialog();
@@ -50,13 +50,13 @@ void showModernSuccessSnackBar(
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
           ],
           border: Border.all(
-            color: _kPrimaryBlue.withOpacity(0.08),
+            color: _kPrimaryBlue.withValues(alpha: 0.08),
             width: 1.2,
           ),
         ),
@@ -108,7 +108,7 @@ class _LogoutDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.14),
+                color: Colors.black.withValues(alpha: 0.14),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
@@ -122,7 +122,7 @@ class _LogoutDialog extends StatelessWidget {
                 height: 62,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _kAccent.withOpacity(0.22),
+                  color: _kAccent.withValues(alpha: 0.22),
                 ),
                 child: const Icon(
                   Icons.logout_rounded,

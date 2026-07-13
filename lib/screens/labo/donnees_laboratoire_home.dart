@@ -6,9 +6,10 @@ import '../../services/export_service.dart';
 import '../../services/firestore_db.dart';
 import '../../services/lab_form_service.dart';
 import '../../utils/csv_columns.dart';
-import 'analyse_laboratoire_page1.dart';
 import 'analyse_crabe_bleu_page2.dart';
+import 'analyse_laboratoire_page1.dart';
 import 'epibionts_page3.dart';
+import 'lab_attachments_screen.dart';
 import 'remarques_page4.dart';
 
 class DonneesLaboratoireHome extends StatefulWidget {
@@ -25,7 +26,7 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
   final CsvExportService _csvService = CsvExportService();
   final ExportService _exportService = ExportService();
   Map<String, dynamic> _data = <String, dynamic>{};
-  late AnimationController _waveController;
+  late final AnimationController _waveController;
   bool _isExporting = false;
 
   @override
@@ -44,20 +45,16 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
   }
 
   void _open(Widget page) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    ).then((_) => setState(() {}));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page)).then(
+      (_) => setState(() {}),
+    );
   }
 
   Future<void> _exportCurrentFormCsv() async {
     if (widget.formId.trim().isEmpty || _isExporting) return;
     setState(() => _isExporting = true);
     try {
-      final doc = await FirestoreDb.db
-          .collection('lab_forms')
-          .doc(widget.formId)
-          .get();
+      final doc = await FirestoreDb.db.collection('lab_forms').doc(widget.formId).get();
       if (!doc.exists || doc.data() == null) {
         throw StateError('Formulaire introuvable.');
       }
@@ -73,8 +70,8 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
         SnackBar(
           content: Text(
             saved.savedLocation == 'Fichiers > Cercle Bleu'
-                ? '✅ CSV enregistre dans Fichiers'
-                : '✅ CSV enregistre dans Telechargements',
+                ? 'CSV enregistre dans Fichiers'
+                : 'CSV enregistre dans Telechargements',
           ),
         ),
       );
@@ -82,7 +79,7 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('❌ Export CSV impossible: $e')));
+      ).showSnackBar(SnackBar(content: Text('Export CSV impossible: $e')));
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
@@ -92,10 +89,7 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
     if (widget.formId.trim().isEmpty || _isExporting) return;
     setState(() => _isExporting = true);
     try {
-      final doc = await FirestoreDb.db
-          .collection('lab_forms')
-          .doc(widget.formId)
-          .get();
+      final doc = await FirestoreDb.db.collection('lab_forms').doc(widget.formId).get();
       if (!doc.exists || doc.data() == null) {
         throw StateError('Formulaire introuvable.');
       }
@@ -105,17 +99,14 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
         docs: [doc.data()!],
         dataKeys: labDataKeys,
       );
-      final saved = await _exportService.saveBytesToDevice(
-        fileName: fileName,
-        bytes: bytes,
-      );
+      final saved = await _exportService.saveBytesToDevice(fileName: fileName, bytes: bytes);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             saved.savedLocation == 'Fichiers > Cercle Bleu'
-                ? '✅ PDF enregistré dans Fichiers'
-                : '✅ PDF enregistré dans Téléchargements',
+                ? 'PDF enregistre dans Fichiers'
+                : 'PDF enregistre dans Telechargements',
           ),
         ),
       );
@@ -123,7 +114,7 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('❌ Export PDF impossible: $e')));
+      ).showSnackBar(SnackBar(content: Text('Export PDF impossible: $e')));
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
@@ -131,6 +122,33 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
 
   @override
   Widget build(BuildContext context) {
+    final items = <_GridItem>[
+      _GridItem(
+        title: 'Infos generales analyse laboratoire',
+        icon: Icons.science_rounded,
+        color: const Color(0xFF00D9D9),
+        onTap: () => _open(AnalyseLaboratoirePage1(formId: widget.formId, data: _data)),
+      ),
+      _GridItem(
+        title: 'Analyse crabe bleu',
+        icon: Icons.bug_report_rounded,
+        color: const Color(0xFF1E3A8A),
+        onTap: () => _open(AnalyseCrabeBleuPage2(formId: widget.formId, data: _data)),
+      ),
+      _GridItem(
+        title: 'Epibionts',
+        icon: Icons.eco_rounded,
+        color: const Color(0xFF00B8B8),
+        onTap: () => _open(EpibiontsPage3(formId: widget.formId, data: _data)),
+      ),
+      _GridItem(
+        title: 'Remarques',
+        icon: Icons.note_alt_rounded,
+        color: const Color(0xFF2D4BA8),
+        onTap: () => _open(RemarquesPage4(formId: widget.formId, data: _data)),
+      ),
+    ];
+
     return Scaffold(
       body: Stack(
         children: [
@@ -141,25 +159,19 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF2D4BA8),
-                    Color(0xFF1E3A8A),
-                  ],
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8), Color(0xFF1E3A8A)],
                 ),
               ),
               child: AnimatedBuilder(
                 animation: _waveController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: WavePainter(
-                      animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
-                      waveHeight: 20,
-                    ),
-                    size: Size.infinite,
-                  );
-                },
+                builder: (context, child) => CustomPaint(
+                  painter: WavePainter(
+                    animation: _waveController.value,
+                    color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
+                    waveHeight: 20,
+                  ),
+                  size: Size.infinite,
+                ),
               ),
             ),
           ),
@@ -175,45 +187,37 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Données Laboratoire',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                      const Expanded(
+                        child: Text(
+                          'Donnees laboratoire',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF1E3A8A).withOpacity(0.08),
-                        width: 1.5,
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00D9D9).withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/image/logo.png',
-                      height: 90,
-                      fit: BoxFit.contain,
-                    ),
+                    ],
                   ),
+                  child: Image.asset('assets/image/logo.png', height: 86, fit: BoxFit.contain),
                 ),
                 const SizedBox(height: 8),
                 StreamBuilder(
@@ -221,24 +225,23 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
-                          'Erreur Firestore: ${snapshot.error}',
+                          'Erreur Firestore',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w600,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       );
                     }
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
-                        padding: EdgeInsets.only(bottom: 6),
+                        padding: EdgeInsets.only(bottom: 8),
                         child: SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         ),
                       );
                     }
@@ -248,175 +251,137 @@ class _DonneesLaboratoireHomeState extends State<DonneesLaboratoireHome>
                       _data = Map<String, dynamic>.from(map);
                       final status = (doc['status'] ?? 'brouillon').toString();
                       final step = (doc['stepCompleted'] ?? 0).toString();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Text(
-                          'Statut: $status • Progression: $step/4',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
+                          'Statut : $status | Progression : $step/4',
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
                       );
                     }
-                    return const SizedBox(height: 6);
+                    return const SizedBox(height: 8);
                   },
                 ),
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final gridWidth = constraints.maxWidth;
-                      final horizontalPadding = 20.0;
-                      final availableWidth =
-                          gridWidth - (horizontalPadding * 2);
-                      final tileWidth = (availableWidth - 14) / 2;
-                      final tileHeight = tileWidth < 150
-                          ? 148.0
-                          : (tileWidth * 1.02);
-                      final maxGridHeight = tileHeight * 2 + 14;
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF5F9FF),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final gridWidth = constraints.maxWidth;
+                        final horizontalPadding = 16.0;
+                        final availableWidth = gridWidth - (horizontalPadding * 2);
+                        final tileWidth = (availableWidth - 12) / 2;
+                        final tileHeight = tileWidth < 150 ? 144.0 : (tileWidth * 0.96);
 
-                      return Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: availableWidth,
-                            maxHeight: maxGridHeight,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: GridView.builder(
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 14,
-                                    crossAxisSpacing: 14,
-                                    mainAxisExtent: tileHeight,
-                                  ),
-                              itemCount: 4,
-                              itemBuilder: (context, index) {
-                                final items = [
-                                  _GridItem(
-                                    title:
-                                        'Infos générales\nanalyse laboratoire',
-                                    icon: Icons.science_rounded,
-                                    color: const Color(0xFF00D9D9),
-                                    onTap: () => _open(
-                                      AnalyseLaboratoirePage1(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Material(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => _open(LabAttachmentsScreen(formId: widget.formId)),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.attach_file_rounded, color: Color(0xFF1E3A8A)),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Pieces jointes',
+                                            style: TextStyle(
+                                              color: Color(0xFF1E3A8A),
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(Icons.chevron_right_rounded, color: Color(0xFF1E3A8A)),
+                                      ],
                                     ),
                                   ),
-                                  _GridItem(
-                                    title: 'Analyse crabe bleu',
-                                    icon: Icons.bug_report_rounded,
-                                    color: const Color(0xFF1E3A8A),
-                                    onTap: () => _open(
-                                      AnalyseCrabeBleuPage2(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  mainAxisExtent: tileHeight,
+                                ),
+                                itemCount: items.length,
+                                itemBuilder: (context, index) {
+                                  final item = items[index];
+                                  return _GridButton(
+                                    title: item.title,
+                                    icon: item.icon,
+                                    color: item.color,
+                                    onTap: item.onTap,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _BottomActionButton(
+                                      text: 'CSV',
+                                      icon: _isExporting
+                                          ? null
+                                          : Icons.file_download_outlined,
+                                      isLoading: _isExporting,
+                                      color: const Color(0xFF1E3A8A),
+                                      onTap: _isExporting || widget.formId.trim().isEmpty
+                                          ? null
+                                          : _exportCurrentFormCsv,
                                     ),
                                   ),
-                                  _GridItem(
-                                    title: 'Epibionts',
-                                    icon: Icons.eco_rounded,
-                                    color: const Color(0xFF00B8B8),
-                                    onTap: () => _open(
-                                      EpibiontsPage3(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _BottomActionButton(
+                                      text: 'PDF',
+                                      icon: Icons.picture_as_pdf_outlined,
+                                      color: const Color(0xFF00B8B8),
+                                      onTap: _isExporting || widget.formId.trim().isEmpty
+                                          ? null
+                                          : _exportCurrentFormPdf,
                                     ),
                                   ),
-                                  _GridItem(
-                                    title: 'Remarques',
-                                    icon: Icons.note_alt_rounded,
-                                    color: const Color(0xFF2D4BA8),
-                                    onTap: () => _open(
-                                      RemarquesPage4(
-                                        formId: widget.formId,
-                                        data: _data,
-                                      ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _BottomActionButton(
+                                      text: 'Retour',
+                                      icon: Icons.arrow_back_rounded,
+                                      color: const Color(0xFF2D4BA8),
+                                      onTap: () => Navigator.pop(context),
                                     ),
                                   ),
-                                ];
-
-                                final item = items[index];
-                                return _GridButton(
-                                  title: item.title,
-                                  icon: item.icon,
-                                  color: item.color,
-                                  onTap: item.onTap,
-                                );
-                              },
-                            ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed:
-                              _isExporting || widget.formId.trim().isEmpty
-                              ? null
-                              : _exportCurrentFormCsv,
-                          icon: _isExporting
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.file_download_outlined),
-                          label: const Text('Exporter CSV'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E3A8A),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed:
-                              _isExporting || widget.formId.trim().isEmpty
-                              ? null
-                              : _exportCurrentFormPdf,
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          label: const Text('Exporter PDF'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF00B8B8),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: _PrimaryGradientButton(
-                          text: 'Retour',
-                          icon: Icons.arrow_back_rounded,
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -479,42 +444,33 @@ class _GridButtonState extends State<_GridButton> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxHeight < 145;
-            final iconBoxSize = compact ? 44.0 : 52.0;
+            final iconBoxSize = compact ? 44.0 : 50.0;
             final iconSize = compact ? 24.0 : 28.0;
-            final spacing = compact ? 8.0 : 12.0;
-            final fontSize = compact ? 12.5 : 14.0;
+            final spacing = compact ? 8.0 : 10.0;
             return Container(
-              padding: EdgeInsets.all(compact ? 12 : 15),
+              padding: EdgeInsets.all(compact ? 12 : 14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
-                  width: 1.5,
-                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08), width: 1.4),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.color.withOpacity(0.12),
-                    blurRadius: 18,
+                    color: widget.color.withValues(alpha: 0.12),
+                    blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.max,
                 children: [
                   Container(
                     width: iconBoxSize,
                     height: iconBoxSize,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: widget.color.withOpacity(0.12),
+                      color: widget.color.withValues(alpha: 0.12),
                     ),
-                    child: Icon(
-                      widget.icon,
-                      color: widget.color,
-                      size: iconSize,
-                    ),
+                    child: Icon(widget.icon, color: widget.color, size: iconSize),
                   ),
                   SizedBox(height: spacing),
                   Expanded(
@@ -522,11 +478,10 @@ class _GridButtonState extends State<_GridButton> {
                       child: Text(
                         widget.title,
                         textAlign: TextAlign.center,
-                        softWrap: true,
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: fontSize,
+                          fontSize: compact ? 12.5 : 13.5,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF1E3A8A),
                           height: 1.2,
@@ -544,55 +499,53 @@ class _GridButtonState extends State<_GridButton> {
   }
 }
 
-class _PrimaryGradientButton extends StatelessWidget {
+class _BottomActionButton extends StatelessWidget {
   final String text;
-  final IconData icon;
-  final VoidCallback onPressed;
+  final IconData? icon;
+  final bool isLoading;
+  final Color color;
+  final VoidCallback? onTap;
 
-  const _PrimaryGradientButton({
+  const _BottomActionButton({
     required this.text,
-    required this.icon,
-    required this.onPressed,
+    required this.color,
+    required this.onTap,
+    this.icon,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
+    return SizedBox(
+      height: 46,
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: Colors.white),
-                const SizedBox(width: 10),
-                Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              else if (icon != null)
+                Icon(icon, size: 16),
+              if (isLoading || icon != null) const SizedBox(width: 6),
+              Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
         ),
       ),

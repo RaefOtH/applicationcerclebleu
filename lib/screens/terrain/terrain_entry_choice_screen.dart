@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/terrain_form_service.dart';
@@ -18,7 +19,7 @@ class TerrainEntryChoiceScreen extends StatefulWidget {
 class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
     with SingleTickerProviderStateMixin {
   final TerrainFormService _service = TerrainFormService();
-  late AnimationController _waveController;
+  late final AnimationController _waveController;
   bool _loading = false;
 
   @override
@@ -43,33 +44,26 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => Matrice1Home(formId: formId),
-        ),
+        MaterialPageRoute(builder: (_) => Matrice1Home(formId: formId)),
       );
     } on FirebaseException catch (e) {
-      if (mounted) {
-        final msg = e.code == 'not-found'
-            ? "Cloud Firestore non initialise. Cree la base '(default)' dans Firebase Console."
-            : "Erreur Firebase: ${e.message ?? e.code}";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-      }
+      if (!mounted) return;
+      final msg = e.code == 'not-found'
+          ? "Cloud Firestore non initialise. Creez la base '(default)' dans Firebase Console."
+          : "Erreur Firebase: ${e.message ?? e.code}";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } on TimeoutException {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Timeout reseau pendant creation du formulaire."),
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Timeout reseau pendant creation du formulaire.'),
+        ),
+      );
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de créer le formulaire')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de creer le formulaire')),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -87,11 +81,7 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF2D4BA8),
-                    Color(0xFF1E3A8A),
-                  ],
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8), Color(0xFF1E3A8A)],
                 ),
               ),
               child: AnimatedBuilder(
@@ -100,7 +90,7 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 18,
                     ),
                     size: Size.infinite,
@@ -121,12 +111,16 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Enquête : Données Terrain',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                      const Expanded(
+                        child: Text(
+                          'Enquête : Données Terrain',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -134,20 +128,17 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
                   const SizedBox(height: 12),
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF00D9D9).withOpacity(0.08),
+                            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -175,14 +166,13 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
                             ),
                             const SizedBox(height: 14),
                             _choiceCard(
-                              title: 'Formulaires récents',
+                              title: 'Formulaires recents',
                               icon: Icons.history_rounded,
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        const TerrainFormsListScreen(),
+                                    builder: (_) => const TerrainFormsListScreen(),
                                   ),
                                 );
                               },
@@ -220,12 +210,12 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFF1E3A8A).withOpacity(0.08),
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00D9D9).withOpacity(0.08),
+              color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -238,7 +228,7 @@ class _TerrainEntryChoiceScreenState extends State<TerrainEntryChoiceScreen>
               height: 52,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF00D9D9).withOpacity(0.15),
+                color: const Color(0xFF00D9D9).withValues(alpha: 0.15),
               ),
               child: Icon(icon, color: const Color(0xFF1E3A8A)),
             ),
@@ -281,13 +271,11 @@ class _PrimaryGradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
-        ),
+        gradient: const LinearGradient(colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)]),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),

@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
+import '../../models/attachment_item.dart';
+import '../../services/attachment_service.dart';
 import '../../services/csv_export_service.dart';
 import 'researcher_details_screen.dart';
 import 'widgets/admin_role_guard.dart';
@@ -17,10 +19,12 @@ class AdminResearchersScreen extends StatefulWidget {
 class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
   final FirebaseFirestore _db = FirestoreDb.db;
   final CsvExportService _csvService = CsvExportService();
+  final AttachmentService _attachmentService = AttachmentService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _placeController = TextEditingController();
 
   bool _loading = true;
+  bool _deleting = false;
   List<_ResearcherSummary> _all = [];
   List<_ResearcherSummary> _filtered = [];
   DateTime? _startDate;
@@ -37,6 +41,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
   void dispose() {
     _searchController.dispose();
     _placeController.dispose();
+    _attachmentService.dispose();
     super.dispose();
   }
 
@@ -63,12 +68,18 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
               .where('ownerId', isEqualTo: doc.id)
               .count()
               .get();
+          final lekCountFuture = _db
+              .collection('lek_forms')
+              .where('ownerId', isEqualTo: doc.id)
+              .count()
+              .get();
 
           final placesFuture = _loadPlacesForResearcher(doc.id);
 
           final counts = await Future.wait([
             terrainCountFuture,
             labCountFuture,
+            lekCountFuture
           ]);
           final places = await placesFuture;
 
@@ -79,6 +90,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
             lastLoginAt: _asDate(data['lastLoginAt']),
             terrainCount: counts[0].count ?? 0,
             labCount: counts[1].count ?? 0,
+            lekCount: counts[2].count ?? 0,
             places: places,
           );
         }),
@@ -108,6 +120,11 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
           .get(),
       _db
           .collection('lab_forms')
+          .where('ownerId', isEqualTo: uid)
+          .limit(20)
+          .get(),
+      _db
+          .collection('lek_forms')
           .where('ownerId', isEqualTo: uid)
           .limit(20)
           .get(),
@@ -230,6 +247,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
         'lastLoginAt',
         'terrainCount',
         'labCount',
+        'lekCount',
         'places',
       ];
       final rows = _filtered.map((r) {
@@ -242,6 +260,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
           _csvService.formatDateTimeForCsv(r.lastLoginAt),
           r.terrainCount.toString(),
           r.labCount.toString(),
+          r.lekCount.toString(),
           r.places.join(' | '),
         ];
       }).toList();
@@ -265,6 +284,95 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
       ).showSnackBar(SnackBar(content: Text('❌ Export impossible: $e')));
     } finally {
       if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _deleteResearcher(_ResearcherSummary summary) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le chercheur'),
+        content: Text(
+          'Supprimer le profil de ${summary.user.fullName.isEmpty ? summary.user.email : summary.user.fullName} et toutes ses donnees associees ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _deleting = true);
+    try {
+      final uid = summary.user.uid;
+      final attachmentsSnap = await _db
+          .collection('attachments_files')
+          .where('ownerId', isEqualTo: uid)
+          .get();
+
+      for (final doc in attachmentsSnap.docs) {
+        final map = doc.data();
+        final att = AttachmentItem.fromMap(doc.id, map);
+        if (att.formId.trim().isEmpty || att.formType.trim().isEmpty) {
+          await _db.collection('attachments_files').doc(doc.id).delete();
+          continue;
+        }
+        await _attachmentService.deleteAttachment(
+          formType: att.formType,
+          formId: att.formId,
+          att: att,
+        );
+      }
+
+      final terrainSnap = await _db
+          .collection('terrain_forms')
+          .where('ownerId', isEqualTo: uid)
+          .get();
+      for (final doc in terrainSnap.docs) {
+        await doc.reference.delete();
+      }
+
+      final labSnap = await _db
+          .collection('lab_forms')
+          .where('ownerId', isEqualTo: uid)
+          .get();
+      for (final doc in labSnap.docs) {
+        await doc.reference.delete();
+      }
+
+      final lekSnap = await _db
+          .collection('lek_forms')
+          .where('ownerId', isEqualTo: uid)
+          .get();
+      for (final doc in lekSnap.docs) {
+        await doc.reference.delete();
+      }
+
+      await _db.collection('users').doc(uid).delete();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Profil chercheur supprime. Le compte Auth Firebase n’est pas supprime depuis le client.',
+          ),
+        ),
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Suppression impossible: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _deleting = false);
     }
   }
 
@@ -352,12 +460,12 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                     border: Border.all(
                                       color: const Color(
                                         0xFF1E3A8A,
-                                      ).withOpacity(0.08),
+                                      ).withValues(alpha: 0.08),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.03),
+                                        color: Colors.black.withValues(alpha: 0.03),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -529,7 +637,7 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                                     border: Border.all(
                                                       color: const Color(
                                                         0xFF1E3A8A,
-                                                      ).withOpacity(0.08),
+                                                      ).withValues(alpha: 0.08),
                                                       width: 1.2,
                                                     ),
                                                   ),
@@ -538,27 +646,64 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                                         CrossAxisAlignment
                                                             .start,
                                                     children: [
-                                                      Text(
-                                                        summary
-                                                                .user
-                                                                .fullName
-                                                                .isEmpty
-                                                            ? 'Utilisateur'
-                                                            : summary
-                                                                  .user
-                                                                  .fullName,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                            0xFF1E3A8A,
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Text(
+                                                              summary
+                                                                      .user
+                                                                      .fullName
+                                                                      .isEmpty
+                                                                  ? 'Utilisateur'
+                                                                  : summary
+                                                                        .user
+                                                                        .fullName,
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style:
+                                                                  const TextStyle(
+                                                                    color: Color(
+                                                                      0xFF1E3A8A,
+                                                                    ),
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w800,
+                                                                    fontSize:
+                                                                        16,
+                                                                  ),
+                                                            ),
                                                           ),
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          fontSize: 16,
-                                                        ),
+                                                          IconButton(
+                                                            onPressed: _deleting
+                                                                ? null
+                                                                : () =>
+                                                                      _deleteResearcher(
+                                                                        summary,
+                                                                      ),
+                                                            icon: const Icon(
+                                                              Icons
+                                                                  .delete_outline_rounded,
+                                                              color: Colors
+                                                                  .redAccent,
+                                                            ),
+                                                            tooltip:
+                                                                'Supprimer le compte',
+                                                          ),
+                                                        ],
                                                       ),
+                                                      if (_deleting)
+                                                        const Padding(
+                                                          padding:
+                                                              EdgeInsets.only(
+                                                                bottom: 8,
+                                                              ),
+                                                          child:
+                                                              LinearProgressIndicator(
+                                                                minHeight: 3,
+                                                              ),
+                                                        ),
                                                       const SizedBox(height: 4),
                                                       Text(
                                                         summary.user.email,
@@ -591,6 +736,10 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                                           _chip(
                                                             'Labo',
                                                             summary.labCount,
+                                                          ),
+                                                          _chip(
+                                                            'LEK',
+                                                            summary.lekCount,
                                                           ),
                                                         ],
                                                       ),
@@ -654,6 +803,7 @@ class _ResearcherSummary {
   final DateTime? lastLoginAt;
   final int terrainCount;
   final int labCount;
+  final int lekCount;
   final Set<String> places;
 
   _ResearcherSummary({
@@ -663,6 +813,7 @@ class _ResearcherSummary {
     required this.lastLoginAt,
     required this.terrainCount,
     required this.labCount,
+    required this.lekCount,
     required this.places,
   });
 }

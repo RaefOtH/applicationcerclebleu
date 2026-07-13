@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Cette application a besoin de la caméra pour ajouter des photos.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Cette application a besoin du microphone pour enregistrer des notes vocales.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Cette application a besoin d'accéder à la galerie pour ajouter des photos.</string>
 	</dict>
 </plist>

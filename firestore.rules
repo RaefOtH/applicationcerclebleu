@@ -10,9 +10,35 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isOwnerDoc(doc) {
+      return isSignedIn() && doc.data.ownerId == request.auth.uid;
+    }
+
+    function ownerMatchesResource() {
+      return resource != null
+        && resource.data != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    function ownerMatchesRequest() {
+      return request.resource != null
+        && request.resource.data != null
+        && request.resource.data.ownerId == request.auth.uid;
+    }
+
     function isResearcher() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "chercheur";
+    }
+
+    function isOwnerOrAssigned(form) {
+      return form.data.ownerId == request.auth.uid
+        || (form.data.assignedTo is list
+            && form.data.assignedTo.hasAny([request.auth.uid]));
     }
 
     function canReadSurvey(survey) {
@@ -23,10 +49,10 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isSignedIn() && request.auth.uid == uid
-        && request.resource.data.role == resource.data.role;
+      allow read: if isAdmin() || isSelf(uid);
+      allow create: if isAdmin() || isSelf(uid);
+      allow update: if isAdmin()
+        || (isSelf(uid) && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
     }
 
@@ -73,31 +99,50 @@ service cloud.firestore {
     }
 
     match /lab_forms/{formId} {
-      allow read: if isSignedIn() && (isAdmin()
-        || resource.data.ownerId == request.auth.uid);
+      allow read: if isAdmin() || isOwnerDoc(resource);
       allow create: if isSignedIn() && (
         isAdmin() || request.resource.data.ownerId == request.auth.uid
       );
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (resource.data.ownerId == request.auth.uid
+        (isOwnerDoc(resource)
           && request.resource.data.ownerId == resource.data.ownerId)
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwnerDoc(resource);
+
+      match /attachments/{attachmentId} {
+        allow read, create, update, delete: if isAdmin()
+          || isOwnerDoc(get(/databases/$(database)/documents/lab_forms/$(formId)));
+      }
     }
 
     match /terrain_forms/{formId} {
-      allow read: if isSignedIn() && (isAdmin()
-        || resource.data.ownerId == request.auth.uid);
+      allow read: if isAdmin() || isOwnerDoc(resource);
       allow create: if isSignedIn() && (
         isAdmin() || request.resource.data.ownerId == request.auth.uid
       );
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (resource.data.ownerId == request.auth.uid
+        (isOwnerDoc(resource)
           && request.resource.data.ownerId == resource.data.ownerId)
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isOwnerDoc(resource);
+      match /attachments/{attachmentId} {
+        allow read, create, update, delete: if isAdmin()
+          || isOwnerDoc(get(/databases/$(database)/documents/terrain_forms/$(formId)));
+      }
+    }
+
+    match /attachments_files/{attachmentId} {
+      allow read, create, update, delete: if isAdmin()
+        || (isSignedIn() && ownerMatchesResource())
+        || (isSignedIn() && ownerMatchesRequest());
+
+      match /chunks/{chunkId} {
+        allow read, create, update, delete: if isAdmin()
+          || (isSignedIn() && ownerMatchesResource())
+          || (isSignedIn() && ownerMatchesRequest());
+      }
     }
 
     match /lek_forms/{formId} {

@@ -1,0 +1,691 @@
+# Dossier Analyse et Conception - PFE
+# Application: Cercle Bleu Enquetes
+
+## 1) Presentation du projet
+
+Cercle Bleu Enquetes est une application mobile Android permettant la collecte, la centralisation, la gestion et l'export des donnees scientifiques liees au crabe bleu dans le cadre du projet Interreg NEXT Italie-Tunisie.
+
+Elle remplace un mode manuel (papier/fichiers disperses) par un systeme numerique base sur:
+- Flutter (application mobile)
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Storage
+- Services d'export CSV/PDF
+
+Le systeme couvre:
+- Chaine Terrain (observation, captures, variables environnementales, remarques, medias)
+- Chaine Laboratoire (analyses biologiques, epibiontes, rattachement observation)
+- Supervision admin (gestion chercheurs, gestion enquetes, statistiques, dossier medias)
+
+## 2) Problematique
+
+Le processus actuel de collecte souffre de:
+- pertes de donnees
+- incoherences de saisie
+- absence de centralisation
+- faible tracabilite
+- difficulte d'analyse scientifique
+- acces tardif des admins aux informations
+
+## 3) Objectifs
+
+1. Numeriser la collecte terrain et laboratoire.
+2. Fiabiliser les donnees par validation et autosave.
+3. Centraliser les informations dans Firestore.
+4. Ajouter des preuves multimedia (photos, audios).
+5. Faciliter l'exploitation via export CSV/PDF.
+6. Offrir une gouvernance admin complete (filtres, stats, supervision).
+
+## 4) Acteurs
+
+### Administrateur
+- gere les utilisateurs chercheurs
+- consulte toutes les enquetes
+- filtre et exporte les donnees
+- consulte le dossier global photos/audio
+
+### Chercheur / Enqueteur / Analyste labo
+- cree et complete les formulaires terrain/labo
+- ajoute des pieces jointes
+- exporte ses formulaires
+
+### Systeme Firebase
+- authentifie les utilisateurs
+- persiste les formulaires et metadonnees
+- stocke les fichiers
+- applique les regles de securite
+
+## 5) Besoins fonctionnels (par module)
+
+### Authentification
+- AUTH-01 Connexion securisee
+- AUTH-02 Deconnexion
+- AUTH-03 Redirection selon role
+
+### Gestion utilisateurs
+- USER-01 Creation compte chercheur (admin)
+- USER-02 Consultation des chercheurs (admin)
+- USER-03 Detail chercheur (admin)
+
+### Enquetes terrain
+- TER-01 Creation formulaire terrain
+- TER-02 Saisie informations generales
+- TER-03 Saisie suivi
+- TER-04 Saisie capture
+- TER-05 Saisie variables environnementales
+- TER-06 Saisie remarques
+- TER-07 Sauvegarde automatique
+
+### Analyses laboratoire
+- LAB-01 Creation formulaire labo
+- LAB-02 Liaison ID observation
+- LAB-03 Saisie analyse crabe bleu
+- LAB-04 Saisie epibiontes
+- LAB-05 Sauvegarde automatique
+
+### Pieces jointes
+- ATT-01 Ajouter photo
+- ATT-02 Ajouter audio
+- ATT-03 Lister pieces jointes
+- ATT-04 Supprimer piece jointe
+- ATT-05 Telecharger piece jointe
+- ATT-06 Telecharger tout filtre (admin)
+
+### Export
+- EXP-01 Export CSV
+- EXP-02 Export PDF
+
+### Statistiques / Administration
+- STATS-01 Tableau de bord
+- STATS-02 Filtres statistiques
+- ADM-01 Gestion enquetes
+- ADM-02 Dossier medias global
+
+## 6) Besoins non fonctionnels
+
+- Performance: ecrans reactifs sur smartphone Android
+- Disponibilite: reprise apres micro-coupures
+- Securite: controle d'acces par role/ownership
+- Confidentialite: isolation des donnees utilisateurs
+- Integrite: validation champs et coherence metier
+- UX/UI: interface lisible et simple sur terrain
+- Maintenabilite: architecture modulaire services/ecrans/modeles
+- Scalabilite: support augmentation des formulaires et medias
+- Auditabilite: createdAt, updatedAt, createdBy
+
+## 7) Regles de gestion
+
+1. Chaque formulaire possede un ownerId.
+2. Le chercheur agit sur ses formulaires (admin excepte).
+3. Chaque piece jointe reference formId et formType.
+4. createdAt et updatedAt assurent la tracabilite.
+5. Les champs conditionnels deviennent obligatoires si "Autre".
+6. Les filtres n'alterent pas les donnees, seulement la vue.
+
+## 8) Backlog (epics / user stories / MoSCoW)
+
+### Epic Authentification
+- US-AUTH-1: Connexion utilisateur (Must)
+
+### Epic Collecte Terrain
+- US-TER-1: Creer et completer formulaire terrain (Must)
+
+### Epic Analyse Laboratoire
+- US-LAB-1: Saisir analyses laboratoire reliees a une observation (Must)
+
+### Epic Pieces jointes
+- US-ATT-1: Ajouter photo/audio sur formulaire (Must)
+- US-ATT-2: Telecharger medias filtres cote admin (Should)
+
+### Epic Export
+- US-EXP-1: Exporter CSV/PDF (Must)
+
+### Epic Administration
+- US-ADM-1: Gerer chercheurs et enquetes (Should)
+
+## 9) Cas d'utilisation textuels
+
+### UC-LOGIN
+Acteur: Admin/Chercheur  
+Precondition: compte valide  
+Scenario:
+1. Saisie email/mot de passe
+2. Authentification Firebase
+3. Chargement profil role
+4. Redirection dashboard  
+Postcondition: session active
+
+### UC-CREER-FORMULAIRE-TERRAIN
+Acteur: Chercheur  
+Precondition: utilisateur connecte  
+Scenario:
+1. Cliquer "Nouveau formulaire"
+2. Creation doc terrain_forms/{formId}
+3. Ouverture page home terrain  
+Postcondition: brouillon cree
+
+### UC-UPLOAD-AUDIO
+Acteur: Chercheur/Admin  
+Precondition: formId existant, permission micro  
+Scenario:
+1. Enregistrer puis arreter audio
+2. Upload Storage
+3. Ecriture metadonnees Firestore  
+Postcondition: audio visible dans liste
+
+### UC-EXPORT-CSV
+Acteur: Admin/Chercheur  
+Precondition: donnees disponibles  
+Scenario:
+1. Lire donnees Firestore
+2. Generer CSV
+3. Sauvegarder sur appareil  
+Postcondition: fichier disponible localement
+
+## 10) Diagramme de contexte
+
+```mermaid
+flowchart LR
+    A[Administrateur] --> S[Cercle Bleu Enquetes]
+    C[Chercheur / Analyste] --> S
+    S --> FA[Firebase Authentication]
+    S --> FS[Cloud Firestore]
+    S --> ST[Firebase Storage]
+    S --> EX[Export CSV/PDF]
+```
+
+## 11) Diagramme de cas d'utilisation global
+
+```mermaid
+flowchart LR
+    Admin[Administrateur]
+    Cher[Chercheur]
+
+    UC1([Se connecter])
+    UC2([Gerer chercheurs])
+    UC3([Creer formulaire terrain])
+    UC4([Saisir donnees terrain])
+    UC5([Creer formulaire labo])
+    UC6([Saisir donnees labo])
+    UC7([Gerer pieces jointes])
+    UC8([Consulter statistiques])
+    UC9([Exporter CSV])
+    UC10([Exporter PDF])
+    UC11([Filtrer formulaires])
+    UC12([Telecharger medias])
+
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC8
+    Admin --> UC9
+    Admin --> UC10
+    Admin --> UC11
+    Admin --> UC12
+
+    Cher --> UC1
+    Cher --> UC3
+    Cher --> UC4
+    Cher --> UC5
+    Cher --> UC6
+    Cher --> UC7
+    Cher --> UC9
+    Cher --> UC10
+```
+
+## 12) Diagrammes de cas d'utilisation par module
+
+### Authentification
+```mermaid
+flowchart LR
+    U[Utilisateur] --> A1([Connexion])
+    U --> A2([Deconnexion])
+    U --> A3([Acces selon role])
+```
+
+### Gestion utilisateurs
+```mermaid
+flowchart LR
+    AD[Admin] --> U1([Creer compte chercheur])
+    AD --> U2([Consulter chercheurs])
+    AD --> U3([Voir details chercheur])
+```
+
+### Enquetes terrain
+```mermaid
+flowchart LR
+    CH[Chercheur] --> T1([Creer formulaire terrain])
+    CH --> T2([Saisir informations generales])
+    CH --> T3([Saisir suivi])
+    CH --> T4([Saisir capture])
+    CH --> T5([Saisir variables environnementales])
+```
+
+### Analyses laboratoire
+```mermaid
+flowchart LR
+    CH[Chercheur/Analyste] --> L1([Creer formulaire labo])
+    CH --> L2([Selectionner ID observation])
+    CH --> L3([Saisir analyse crabe bleu])
+    CH --> L4([Saisir epibiontes])
+```
+
+### Pieces jointes
+```mermaid
+flowchart LR
+    U[Admin/Chercheur] --> P1([Ajouter photo])
+    U --> P2([Ajouter audio])
+    U --> P3([Lister medias])
+    U --> P4([Supprimer media])
+    U --> P5([Telecharger media])
+    AD[Admin] --> P6([Telecharger tout filtre])
+```
+
+### Export
+```mermaid
+flowchart LR
+    U[Admin/Chercheur] --> E1([Exporter CSV])
+    U --> E2([Exporter PDF])
+```
+
+### Statistiques
+```mermaid
+flowchart LR
+    AD[Admin] --> S1([Consulter KPI])
+    AD --> S2([Filtrer periode/chercheur/lieu])
+```
+
+## 13) Diagramme de classes
+
+```mermaid
+classDiagram
+    class User {
+      +uid: String
+      +fullName: String
+      +email: String
+      +role: String
+    }
+    class FormulaireTerrain {
+      +formId: String
+      +ownerId: String
+      +status: String
+      +data: Map
+      +saveAuto()
+    }
+    class FormulaireLaboratoire {
+      +formId: String
+      +ownerId: String
+      +status: String
+      +data: Map
+      +observationId: String
+      +saveAuto()
+    }
+    class Observation {
+      +idObservation: String
+      +pays: String
+      +region: String
+      +port: String
+      +date: DateTime
+    }
+    class Capture {
+      +espece: String
+      +abondance: int
+    }
+    class Environnement {
+      +substrat: String
+      +profondeur: String
+    }
+    class PieceJointe {
+      +attachmentId: String
+      +formId: String
+      +formType: String
+      +type: String
+      +storagePath: String
+      +downloadUrl: String
+      +sizeBytes: int
+    }
+    class ExportService {
+      +exportCsv()
+      +exportPdf()
+    }
+    class AuthService {
+      +login()
+      +logout()
+    }
+    class StorageService {
+      +upload()
+      +download()
+      +delete()
+    }
+
+    User \"1\" --> \"0..*\" FormulaireTerrain
+    User \"1\" --> \"0..*\" FormulaireLaboratoire
+    FormulaireTerrain \"1\" *-- \"1\" Observation
+    FormulaireTerrain \"1\" *-- \"0..*\" Capture
+    FormulaireTerrain \"1\" *-- \"1\" Environnement
+    FormulaireTerrain \"1\" o-- \"0..*\" PieceJointe
+    FormulaireLaboratoire \"1\" o-- \"0..*\" PieceJointe
+    PieceJointe ..> StorageService
+    FormulaireTerrain ..> ExportService
+    FormulaireLaboratoire ..> ExportService
+    User ..> AuthService
+```
+
+## 14) Diagrammes de sequence
+
+### Connexion utilisateur
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant App as Flutter App
+    participant Auth as Firebase Auth
+    participant DB as Firestore
+    U->>App: Saisir identifiants
+    App->>Auth: signIn()
+    Auth-->>App: uid
+    App->>DB: get users/{uid}
+    DB-->>App: role
+    App-->>U: Dashboard role
+```
+
+### Creation enquete terrain
+```mermaid
+sequenceDiagram
+    actor C as Chercheur
+    participant App as Flutter App
+    participant DB as Firestore
+    C->>App: Nouveau formulaire
+    App->>DB: set terrain_forms/{formId}
+    DB-->>App: OK
+    App-->>C: Ouvrir Matrice1Home
+```
+
+### Saisie donnees labo
+```mermaid
+sequenceDiagram
+    actor L as Analyste
+    participant App as Flutter App
+    participant DB as Firestore
+    L->>App: Modifier champs
+    App->>DB: update lab_forms/{formId}.data
+    DB-->>App: OK
+```
+
+### Upload photo
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant App as Flutter App
+    participant ST as Firebase Storage
+    participant DB as Firestore
+    U->>App: Ajouter photo
+    App->>ST: putFile()
+    ST-->>App: success
+    App->>ST: getDownloadURL()
+    ST-->>App: URL
+    App->>DB: set attachment metadata
+```
+
+### Upload audio
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant App as Flutter App
+    participant ST as Firebase Storage
+    participant DB as Firestore
+    U->>App: Enregistrer audio
+    App->>ST: putFile()
+    ST-->>App: success
+    App->>DB: set attachment metadata
+```
+
+### Export CSV
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant App as Flutter App
+    participant DB as Firestore
+    participant EX as ExportService
+    U->>App: Export CSV
+    App->>DB: Lire donnees
+    DB-->>App: Dataset
+    App->>EX: buildCsv()
+    EX-->>App: bytes
+    App->>EX: saveToDevice()
+```
+
+### Export PDF
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant App as Flutter App
+    participant DB as Firestore
+    participant EX as ExportService
+    U->>App: Export PDF
+    App->>DB: Lire donnees
+    App->>EX: buildPdf()
+    App->>EX: saveToDevice()
+```
+
+### Gestion utilisateurs par admin
+```mermaid
+sequenceDiagram
+    actor A as Admin
+    participant App as Flutter App
+    participant Auth as Firebase Auth
+    participant DB as Firestore
+    A->>App: Creer chercheur
+    App->>Auth: createUser()
+    Auth-->>App: uid
+    App->>DB: set users/{uid}
+```
+
+## 15) Diagrammes d'activite
+
+### Activite globale collecte terrain
+```mermaid
+flowchart TD
+    A[Debut] --> B[Connexion]
+    B --> C[Creer/Ouvrir formulaire terrain]
+    C --> D[Saisir infos generales]
+    D --> E[Saisir suivi]
+    E --> F[Saisir captures]
+    F --> G[Saisir variables environnementales]
+    G --> H[Ajouter remarques]
+    H --> I[Ajouter pieces jointes]
+    I --> J[Autosave/Validation]
+    J --> K[Export optionnel]
+    K --> L[Fin]
+```
+
+### Activite upload media
+```mermaid
+flowchart TD
+    A[Choisir media] --> B{Photo ou Audio}
+    B -->|Photo| C[Camera/Galerie]
+    B -->|Audio| D[Enregistrement]
+    C --> E[Upload Storage]
+    D --> E
+    E --> F{Succes}
+    F -->|Oui| G[Ecriture metadata Firestore]
+    F -->|Non| H[Erreur + retry]
+    G --> I[Fin]
+    H --> I
+```
+
+## 16) Diagramme d'etats
+
+```mermaid
+stateDiagram-v2
+    [*] --> Brouillon
+    Brouillon --> EnCours: saisie
+    EnCours --> EnCours: autosave
+    EnCours --> Complet: validation
+    Complet --> Soumis: soumettre
+    Soumis --> Archive: cloture
+```
+
+## 17) Diagramme de composants
+
+```mermaid
+flowchart LR
+    UI[Flutter UI]
+    SVC[Services Dart]
+    AUTH[Firebase Auth]
+    DB[Cloud Firestore]
+    ST[Firebase Storage]
+    EX[Export CSV/PDF]
+    UI --> SVC
+    SVC --> AUTH
+    SVC --> DB
+    SVC --> ST
+    SVC --> EX
+```
+
+## 18) Diagramme d'architecture
+
+```mermaid
+flowchart TB
+    subgraph Mobile
+      P[Presentation Flutter]
+      M[Metier Dart]
+      D[Acces donnees]
+    end
+    subgraph Cloud
+      A[Firebase Auth]
+      F[Cloud Firestore]
+      S[Firebase Storage]
+    end
+    subgraph Sortie
+      C[CSV]
+      R[PDF]
+    end
+    P --> M --> D
+    D --> A
+    D --> F
+    D --> S
+    D --> C
+    D --> R
+```
+
+## 19) Diagramme de deploiement
+
+```mermaid
+flowchart LR
+    PH[Smartphone Android]
+    NET[Internet]
+    FB[Firebase Cloud]
+    FA[Auth]
+    FF[Firestore]
+    FS[Storage]
+    PH --> NET --> FB
+    FB --> FA
+    FB --> FF
+    FB --> FS
+```
+
+## 20) Diagramme base de donnees (ER)
+
+```mermaid
+erDiagram
+    USERS ||--o{ TERRAIN_FORMS : cree
+    USERS ||--o{ LAB_FORMS : cree
+    USERS ||--o{ ATTACHMENTS_FILES : possede
+    TERRAIN_FORMS ||--o{ ATTACHMENTS_FILES : lie
+    LAB_FORMS ||--o{ ATTACHMENTS_FILES : lie
+
+    USERS {
+      string uid PK
+      string fullName
+      string email
+      string role
+      timestamp createdAt
+      timestamp updatedAt
+    }
+    TERRAIN_FORMS {
+      string formId PK
+      string ownerId FK
+      string status
+      map data
+      timestamp createdAt
+      timestamp updatedAt
+    }
+    LAB_FORMS {
+      string formId PK
+      string ownerId FK
+      string status
+      map data
+      timestamp createdAt
+      timestamp updatedAt
+    }
+    ATTACHMENTS_FILES {
+      string attachmentId PK
+      string formId
+      string formType
+      string ownerId
+      string type
+      string fileName
+      string storagePath
+      string downloadUrl
+      string contentType
+      int sizeBytes
+      string place
+      timestamp createdAt
+      string createdBy
+      string createdByName
+    }
+```
+
+## 21) Diagramme de flux de donnees
+
+```mermaid
+flowchart LR
+    U[Utilisateur] --> P1[Saisie formulaire]
+    P1 --> D1[(Firestore Formulaires)]
+    U --> P2[Upload media]
+    P2 --> D2[(Storage Fichiers)]
+    P2 --> D3[(Firestore Attachments)]
+    U --> P3[Export]
+    P3 --> O1[Fichier CSV/PDF]
+    A[Admin] --> P4[Filtres et supervision]
+    P4 --> D1
+    P4 --> D3
+```
+
+## 22) Diagramme parcours utilisateur
+
+```mermaid
+flowchart TD
+    S1[Ouvrir application] --> S2[Connexion]
+    S2 --> S3{Role}
+    S3 -->|Chercheur| S4[Dashboard chercheur]
+    S3 -->|Admin| S5[Dashboard admin]
+    S4 --> S6[Creer/Ouvrir terrain ou labo]
+    S6 --> S7[Saisie + autosave]
+    S7 --> S8[Ajouter photo/audio]
+    S8 --> S9[Export CSV/PDF]
+    S5 --> S10[Gestion chercheurs/enquetes]
+    S10 --> S11[Dossier photos/audio]
+    S11 --> S12[Filtres + telechargement]
+```
+
+## 23) Section securite
+
+Mecanismes:
+- Authentification Firebase obligatoire.
+- Gestion role admin/chercheur.
+- Regles Firestore et Storage.
+- Validation des entrees.
+- Protection fichiers (metadonnees + chemins controles).
+- Traçabilite (createdAt, createdBy, ownerId).
+
+Risques / contre-mesures:
+- Acces non autorise -> regles role/owner.
+- Exposition fichiers -> regles Storage.
+- Incoherence donnees -> validations + contraintes metier.
+- Reseau instable -> autosave + reprise.
+- Echec upload -> messages utilisateur + fallback.
+
+## 24) Conclusion de la conception
+
+La conception de Cercle Bleu Enquetes offre une architecture mobile-cloud robuste, orientee qualite scientifique et tracabilite, avec une UX adaptee au terrain et une gouvernance admin complete. Le dossier est pret a etre integre dans un rapport PFE (analyse et conception UML).
+

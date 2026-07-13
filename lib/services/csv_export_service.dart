@@ -44,6 +44,15 @@ class CsvExportService {
     );
   }
 
+  Future<File> exportLekCsv({required bool isAdmin, required String uid}) {
+    return _exportCollectionCsv(
+      collection: 'lek_forms',
+      type: 'LEK',
+      isAdmin: isAdmin,
+      uid: uid,
+    );
+  }
+
   Future<File> exportAllCsv({
     required bool isAdmin,
     required String uid,

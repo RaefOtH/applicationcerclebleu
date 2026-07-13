@@ -12,6 +12,7 @@ import '../services/csv_export_service.dart';
 import '../services/user_service.dart';
 import 'labo/lab_entry_choice_screen.dart';
 import 'terrain/terrain_entry_choice_screen.dart';
+import 'lek/lek_entry_choice_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final AppUser? user;
@@ -180,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00D9D9).withOpacity(0.2),
+                  color: const Color(0xFF00D9D9).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -351,6 +352,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   onTap: () => _runExport('lab'),
                 ),
                 _buildExportItem(
+                  icon: Icons.map_outlined,
+                  label: 'Exporter Lek',
+                  onTap: () => _runExport('lek'),
+                ),
+                _buildExportItem(
                   icon: Icons.dataset_outlined,
                   label: 'Exporter Tout',
                   onTap: () => _runExport('all'),
@@ -417,6 +423,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           uid: current.uid,
         ),
         'lab' => await _csvExportService.exportLabCsv(
+          isAdmin: isAdmin,
+          uid: current.uid,
+        ),
+        'lek' => await _csvExportService.exportLekCsv(
           isAdmin: isAdmin,
           uid: current.uid,
         ),
@@ -552,7 +562,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.15),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.15),
                       waveHeight: 20,
                     ),
                     size: Size.infinite,
@@ -565,7 +575,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.1),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.1),
                       waveHeight: 30,
                       offset: 100,
                     ),
@@ -628,7 +638,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.85),
+                              color: Colors.white.withValues(alpha: 0.85),
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -689,7 +699,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         'Bonjour, $fullName',
                         style: TextStyle(
                           fontSize: 15,
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w400,
                           letterSpacing: 0.3,
                         ),
@@ -699,7 +709,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         widget.dashboardTitle,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.95),
+                          color: Colors.white.withValues(alpha: 0.95),
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.2,
                         ),
@@ -720,11 +730,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -739,12 +749,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                       decoration: InputDecoration(
                         hintText: 'Rechercher une enquête...',
                         hintStyle: TextStyle(
-                          color: const Color(0xFF1E3A8A).withOpacity(0.5),
+                          color: const Color(0xFF1E3A8A).withValues(alpha: 0.5),
                           fontSize: 15,
                         ),
                         prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: const Color(0xFF1E3A8A).withOpacity(0.6),
+                          color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
                         ),
                         suffixIcon: GestureDetector(
                           onTap: _pickDate,
@@ -827,12 +837,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFF1E3A8A).withOpacity(0.08),
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF00D9D9).withOpacity(0.08),
+              color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -862,7 +872,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFF00D9D9).withOpacity(0.15),
+                color: const Color(0xFF00D9D9).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -903,7 +913,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -952,7 +962,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                         decoration: BoxDecoration(
                                           color: const Color(
                                             0xFF00D9D9,
-                                          ).withOpacity(0.15),
+                                          ).withValues(alpha: 0.15),
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),
@@ -1006,8 +1016,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               decoration: BoxDecoration(
                                 color: survey['status'] == 'En cours'
-                                    ? const Color(0xFF00D9D9).withOpacity(0.15)
-                                    : const Color(0xFF1E3A8A).withOpacity(0.1),
+                                    ? const Color(0xFF00D9D9).withValues(alpha: 0.15)
+                                    : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -1031,7 +1041,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               top: BorderSide(
                                 color: const Color(
                                   0xFF1E3A8A,
-                                ).withOpacity(0.08),
+                                ).withValues(alpha: 0.08),
                                 width: 1.5,
                               ),
                             ),
@@ -1066,7 +1076,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 decoration: BoxDecoration(
                                   color: const Color(
                                     0xFF00D9D9,
-                                  ).withOpacity(0.1),
+                                  ).withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -1113,7 +1123,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00D9D9).withOpacity(0.5),
+                    color: const Color(0xFF00D9D9).withValues(alpha: 0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 8),
                   ),
@@ -1200,6 +1210,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                   },
                 ),
                 const SizedBox(height: 12),
+                _buildModalButton(
+                  icon: Icons.assignment_rounded,
+                  label: 'Questionnaire LEK',
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      this.context,
+                      MaterialPageRoute(
+                        builder: (_) => const LekEntryChoiceScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
@@ -1231,7 +1258,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.3),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1287,8 +1314,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withOpacity(0.15),
-                    Colors.white.withOpacity(0.0),
+                    Colors.white.withValues(alpha: 0.15),
+                    Colors.white.withValues(alpha: 0.0),
                   ],
                 ),
               ),

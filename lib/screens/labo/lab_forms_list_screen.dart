@@ -392,7 +392,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E3A8A).withOpacity(0.08),
+        color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -430,7 +430,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                 builder: (context, child) => CustomPaint(
                   painter: WavePainter(
                     animation: _waveController.value,
-                    color: const Color(0xFF00D9D9).withOpacity(0.12),
+                    color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                     waveHeight: 16,
                   ),
                   size: Size.infinite,
@@ -512,7 +512,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF00D9D9).withOpacity(0.06),
+                                        color: const Color(0xFF00D9D9).withValues(alpha: 0.06),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
                                       ),
@@ -576,7 +576,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                                   ),
                                 ),
                                 child: TextField(
@@ -672,7 +672,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                       )
                                     : ListView.separated(
                                         itemCount: visible.length + (filtered.length > visible.length ? 1 : 0),
-                                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                                         itemBuilder: (context, index) {
                                           if (index >= visible.length) {
                                             return Center(
@@ -698,10 +698,10 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                             decoration: BoxDecoration(
                                               color: Colors.white,
                                               borderRadius: BorderRadius.circular(18),
-                                              border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.08)),
+                                              border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(0.03),
+                                                  color: Colors.black.withValues(alpha: 0.03),
                                                   blurRadius: 10,
                                                   offset: const Offset(0, 4),
                                                 ),
@@ -716,7 +716,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                                       width: 34,
                                                       height: 34,
                                                       decoration: BoxDecoration(
-                                                        color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                                        color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                                                         borderRadius: BorderRadius.circular(10),
                                                       ),
                                                       child: const Icon(
@@ -741,7 +741,7 @@ class _LabFormsListScreenState extends State<LabFormsListScreen>
                                                     Container(
                                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                                       decoration: BoxDecoration(
-                                                        color: _statusColor(status).withOpacity(0.15),
+                                                        color: _statusColor(status).withValues(alpha: 0.15),
                                                         borderRadius: BorderRadius.circular(8),
                                                       ),
                                                       child: Text(

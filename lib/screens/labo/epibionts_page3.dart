@@ -8,11 +8,7 @@ import 'remarques_page4.dart';
 class EpibiontsPage3 extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const EpibiontsPage3({
-    super.key,
-    required this.data,
-    required this.formId,
-  });
+  const EpibiontsPage3({super.key, required this.data, required this.formId});
 
   @override
   State<EpibiontsPage3> createState() => _EpibiontsPage3State();
@@ -57,38 +53,35 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
   }
 
   InputDecoration _dec(String label) => InputDecoration(
-        labelText: label,
-        hintText: 'Saisir ici...',
-        hintStyle: const TextStyle(
-          color: Color(0xFF94A3B8),
-          fontSize: 14,
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        floatingLabelAlignment: FloatingLabelAlignment.start,
-        labelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w600,
-        ),
-        floatingLabelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w700,
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF8FBFF),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-        ),
-      );
+    labelText: label,
+    hintText: 'Saisir ici...',
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelAlignment: FloatingLabelAlignment.start,
+    labelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w600,
+    ),
+    floatingLabelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w700,
+    ),
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+    ),
+  );
 
   Widget _field({
     required String label,
@@ -103,8 +96,9 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
       minLines: minLines,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      textInputAction:
-          maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
+      textInputAction: maxLines > 1
+          ? TextInputAction.newline
+          : TextInputAction.next,
       decoration: _dec(label),
       onChanged: (v) {
         data[key] = v;
@@ -113,19 +107,42 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
     );
   }
 
-  void _goNext() {
-    _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 3,
+  Widget _fieldDropdownOuiNon({
+    required String label,
+    required TextEditingController ctrl,
+    required String key,
+  }) {
+    const options = ['oui', 'non'];
+    final current = ctrl.text.trim().toLowerCase();
+    final initialValue = options.contains(current) ? current : null;
+    return DropdownButtonFormField<String>(
+      initialValue: initialValue,
+      isExpanded: true,
+      decoration: _dec(label),
+      hint: const Text('Choisir...'),
+      items: options
+          .map(
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(item, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        final selected = value ?? '';
+        ctrl.text = selected;
+        data[key] = selected;
+        _service.scheduleFullDataSave(widget.formId, data);
+      },
     );
+  }
+
+  void _goNext() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 3);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RemarquesPage4(
-          formId: widget.formId,
-          data: data,
-        ),
+        builder: (_) => RemarquesPage4(formId: widget.formId, data: data),
       ),
     );
   }
@@ -164,7 +181,7 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 18,
                     ),
                     size: Size.infinite,
@@ -197,7 +214,7 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
                       Text(
                         'Étape 3/4',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -211,7 +228,7 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
                     children: [
                       _sectionCard(
                         children: [
-                          _field(
+                          _fieldDropdownOuiNon(
                             label: "Epibiontes (oui/non)",
                             ctrl: _epiOuiNonCtrl,
                             key: "epibiontesOuiNon",
@@ -277,12 +294,12 @@ class _EpibiontsPage3State extends State<EpibiontsPage3>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.08),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -314,7 +331,7 @@ class _PrimaryGradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -374,12 +391,10 @@ class _OutlineButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          color: const Color(0xFF1E3A8A).withOpacity(0.3),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
           width: 1.5,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );

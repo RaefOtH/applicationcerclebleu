@@ -93,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 20,
                     ),
                     size: Size.infinite,
@@ -222,12 +222,12 @@ class _ProfileContent extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF00D9D9).withOpacity(0.08),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -247,12 +247,12 @@ class _ProfileContent extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                    color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
                     width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -287,10 +287,10 @@ class _ProfileContent extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00D9D9).withOpacity(0.16),
+                        color: const Color(0xFF00D9D9).withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: const Color(0xFF00D9D9).withOpacity(0.45),
+                          color: const Color(0xFF00D9D9).withValues(alpha: 0.45),
                         ),
                       ),
                       child: Text(
@@ -315,7 +315,7 @@ class _ProfileContent extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF00D9D9).withOpacity(0.35),
+                        color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -377,7 +377,7 @@ class _InfoTile extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFF1E3A8A).withOpacity(0.08),
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: const Color(0xFF1E3A8A), size: 18),

@@ -46,12 +46,12 @@ class FormsFilterBar extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.08),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),

@@ -83,8 +83,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
     _poidsOeufsCtrl.text = (data['poidsOeufs'] ?? '').toString();
     _poidsEstomacCtrl.text = (data['poidsEstomac'] ?? '').toString();
     _indiceGonadoCtrl.text = (data['indiceGonado'] ?? '').toString();
-    _poidsSpermathequeCtrl.text =
-        (data['poidsSpermatheque'] ?? '').toString();
+    _poidsSpermathequeCtrl.text = (data['poidsSpermatheque'] ?? '').toString();
 
     _stadeMueCtrl.text = (data['stadeMue'] ?? '').toString();
     _tauxProteinesCtrl.text = (data['tauxProteines'] ?? '').toString();
@@ -135,46 +134,43 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
   }
 
   InputDecoration _dec(String label) => InputDecoration(
-        labelText: label,
-        hintText: 'Saisir ici...',
-        hintStyle: const TextStyle(
-          color: Color(0xFF94A3B8),
-          fontSize: 14,
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        floatingLabelAlignment: FloatingLabelAlignment.start,
-        labelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w600,
-        ),
-        floatingLabelStyle: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w700,
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF8FBFF),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-        ),
-      );
+    labelText: label,
+    hintText: 'Saisir ici...',
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelAlignment: FloatingLabelAlignment.start,
+    labelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w600,
+    ),
+    floatingLabelStyle: const TextStyle(
+      color: Color(0xFF1E3A8A),
+      fontWeight: FontWeight.w700,
+    ),
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+    ),
+  );
 
   List<TextInputFormatter> _intOnly() => [
-        FilteringTextInputFormatter.digitsOnly,
-      ];
+    FilteringTextInputFormatter.digitsOnly,
+  ];
 
   List<TextInputFormatter> _decimalOnly() => [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*([.,]\d*)?$')),
-      ];
+    FilteringTextInputFormatter.allow(RegExp(r'^\d*([.,]\d*)?$')),
+  ];
 
   Widget _fieldText({
     required String label,
@@ -274,10 +270,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
       decoration: _dec("QC_Flag"),
       items: options
           .map(
-            (item) => DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            ),
+            (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
           )
           .toList(),
       onChanged: (value) {
@@ -290,18 +283,11 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
   }
 
   void _goNext() {
-    _service.updateFormData(
-      widget.formId,
-      data,
-      stepCompleted: 2,
-    );
+    _service.updateFormData(widget.formId, data, stepCompleted: 2);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EpibiontsPage3(
-          formId: widget.formId,
-          data: data,
-        ),
+        builder: (_) => EpibiontsPage3(formId: widget.formId, data: data),
       ),
     );
   }
@@ -340,7 +326,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                   return CustomPaint(
                     painter: WavePainter(
                       animation: _waveController.value,
-                      color: const Color(0xFF00D9D9).withOpacity(0.12),
+                      color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
                       waveHeight: 18,
                     ),
                     size: Size.infinite,
@@ -376,7 +362,7 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                       Text(
                         'Étape 2/4',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -388,181 +374,189 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      _sectionCard(children: [
-                        _fieldQcFlagDropdown(),
-                        const SizedBox(height: 12),
-                        _fieldText(
-                          label: "Espèce",
-                          ctrl: _especeCtrl,
-                          key: "espece",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldText(
-                          label: "ID_Individu",
-                          ctrl: _idIndividuCtrl,
-                          key: "idIndividu",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDropdown(
-                          label: "Sexe",
-                          ctrl: _sexeCtrl,
-                          key: "sexe",
-                          items: const ["M", "F", "I"],
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDropdown(
-                          label: "Stade",
-                          ctrl: _stadeCtrl,
-                          key: "stade",
-                          items: const ["juvénile", "adulte"],
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDropdown(
-                          label: "Stade de maturité",
-                          ctrl: _maturiteCtrl,
-                          key: "maturite",
-                          items: const [
-                            "immature",
-                            "rudimentaire",
-                            "maturation",
-                            "mature",
-                            "maturité avancée",
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "CW (mm)",
-                          ctrl: _cwCtrl,
-                          key: "cw",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "CL (mm)",
-                          ctrl: _clCtrl,
-                          key: "cl",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Épaisseur C (mm)",
-                          ctrl: _epaisseurCCtrl,
-                          key: "epaisseurC",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Poids total",
-                          ctrl: _poidsTotalCtrl,
-                          key: "poidsTotal",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Poids crabe éviscéré (g)",
-                          ctrl: _poidsEviscereCtrl,
-                          key: "poidsEviscere",
-                        ),
-                      ]),
+                      _sectionCard(
+                        children: [
+                          _fieldQcFlagDropdown(),
+                          const SizedBox(height: 12),
+                          _fieldText(
+                            label: "Espèce",
+                            ctrl: _especeCtrl,
+                            key: "espece",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldText(
+                            label: "ID_Individu",
+                            ctrl: _idIndividuCtrl,
+                            key: "idIndividu",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDropdown(
+                            label: "Sexe",
+                            ctrl: _sexeCtrl,
+                            key: "sexe",
+                            items: const ["M", "F", "I"],
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDropdown(
+                            label: "Stade",
+                            ctrl: _stadeCtrl,
+                            key: "stade",
+                            items: const ["juvénile", "adulte"],
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDropdown(
+                            label: "Stade de maturité",
+                            ctrl: _maturiteCtrl,
+                            key: "maturite",
+                            items: const [
+                              "immature",
+                              "rudimentaire",
+                              "maturation",
+                              "mature",
+                              "maturité avancée",
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "CW (mm)",
+                            ctrl: _cwCtrl,
+                            key: "cw",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "CL (mm)",
+                            ctrl: _clCtrl,
+                            key: "cl",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Épaisseur C (mm)",
+                            ctrl: _epaisseurCCtrl,
+                            key: "epaisseurC",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Poids total (g)",
+                            ctrl: _poidsTotalCtrl,
+                            key: "poidsTotal",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Poids crabe éviscéré (g)",
+                            ctrl: _poidsEviscereCtrl,
+                            key: "poidsEviscere",
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
-                      _sectionCard(children: [
-                        _fieldInt(
-                          label: "Nbre d’appendices gauche",
-                          ctrl: _appendGCtrl,
-                          key: "appendicesGauche",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldInt(
-                          label: "Nbre d’appendices droit",
-                          ctrl: _appendDCtrl,
-                          key: "appendicesDroit",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldText(
-                          label: "Pinces manquantes (oui/non)",
-                          ctrl: _pincesCtrl,
-                          key: "pincesManquantes",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDropdown(
-                          label: "Couleur des œufs",
-                          ctrl: _couleurOeufsCtrl,
-                          key: "couleurOeufs",
-                          items: const ["ST1", "ST2", "ST3"],
-                        ),
-                      ]),
+                      _sectionCard(
+                        children: [
+                          _fieldInt(
+                            label: "Nbre d’appendices gauche",
+                            ctrl: _appendGCtrl,
+                            key: "appendicesGauche",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldInt(
+                            label: "Nbre d’appendices droit",
+                            ctrl: _appendDCtrl,
+                            key: "appendicesDroit",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldText(
+                            label: "Pinces manquantes (oui/non)",
+                            ctrl: _pincesCtrl,
+                            key: "pincesManquantes",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDropdown(
+                            label: "Couleur des œufs",
+                            ctrl: _couleurOeufsCtrl,
+                            key: "couleurOeufs",
+                            items: const ["ST1", "ST2", "ST3"],
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
-                      _sectionCard(children: [
-                        _fieldDecimal(
-                          label: "Poids des gonades (g)",
-                          ctrl: _poidsGonadesCtrl,
-                          key: "poidsGonades",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Poids des œufs (g)",
-                          ctrl: _poidsOeufsCtrl,
-                          key: "poidsOeufs",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Poids de l’estomac (g)",
-                          ctrl: _poidsEstomacCtrl,
-                          key: "poidsEstomac",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Indice gonadosomatique",
-                          ctrl: _indiceGonadoCtrl,
-                          key: "indiceGonado",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Poids de la spermathèque",
-                          ctrl: _poidsSpermathequeCtrl,
-                          key: "poidsSpermatheque",
-                        ),
-                      ]),
+                      _sectionCard(
+                        children: [
+                          _fieldDecimal(
+                            label: "Poids des gonades (g)",
+                            ctrl: _poidsGonadesCtrl,
+                            key: "poidsGonades",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Poids des œufs (g)",
+                            ctrl: _poidsOeufsCtrl,
+                            key: "poidsOeufs",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Poids de l’estomac (g)",
+                            ctrl: _poidsEstomacCtrl,
+                            key: "poidsEstomac",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Indice gonadosomatique",
+                            ctrl: _indiceGonadoCtrl,
+                            key: "indiceGonado",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Poids de la spermathèque",
+                            ctrl: _poidsSpermathequeCtrl,
+                            key: "poidsSpermatheque",
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
-                      _sectionCard(children: [
-                        _fieldDropdown(
-                          label: "Stade de la mue",
-                          ctrl: _stadeMueCtrl,
-                          key: "stadeMue",
-                          items: const [
-                            "post-mue",
-                            "intermue",
-                            "pré-mue",
-                            "mue",
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Taux des protéines",
-                          ctrl: _tauxProteinesCtrl,
-                          key: "tauxProteines",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Taux des lipides",
-                          ctrl: _tauxLipidesCtrl,
-                          key: "tauxLipides",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Taux des Hydrates de Carbone",
-                          ctrl: _tauxProteines2Ctrl,
-                          key: "tauxProteines2",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Humidité",
-                          ctrl: _humiditeCtrl,
-                          key: "humidite",
-                        ),
-                        const SizedBox(height: 12),
-                        _fieldDecimal(
-                          label: "Cendres",
-                          ctrl: _cendresCtrl,
-                          key: "cendres",
-                        ),
-                      ]),
+                      _sectionCard(
+                        children: [
+                          _fieldDropdown(
+                            label: "Stade de la mue",
+                            ctrl: _stadeMueCtrl,
+                            key: "stadeMue",
+                            items: const [
+                              "post-mue",
+                              "intermue",
+                              "pré-mue",
+                              "mue",
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Taux des protéines",
+                            ctrl: _tauxProteinesCtrl,
+                            key: "tauxProteines",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Taux des lipides",
+                            ctrl: _tauxLipidesCtrl,
+                            key: "tauxLipides",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Taux des Hydrates de Carbone",
+                            ctrl: _tauxProteines2Ctrl,
+                            key: "tauxProteines2",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Humidité",
+                            ctrl: _humiditeCtrl,
+                            key: "humidite",
+                          ),
+                          const SizedBox(height: 12),
+                          _fieldDecimal(
+                            label: "Cendres",
+                            ctrl: _cendresCtrl,
+                            key: "cendres",
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -601,12 +595,12 @@ class _AnalyseCrabeBleuPage2State extends State<AnalyseCrabeBleuPage2>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.08),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.08),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -638,7 +632,7 @@ class _PrimaryGradientButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D9D9).withOpacity(0.35),
+            color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -698,12 +692,10 @@ class _OutlineButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          color: const Color(0xFF1E3A8A).withOpacity(0.3),
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
           width: 1.5,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );
