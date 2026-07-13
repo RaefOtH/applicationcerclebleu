@@ -24,10 +24,12 @@ class StatsFilters {
 class DashboardStatsResult {
   final int totalTerrain;
   final int totalLabo;
+  final int totalLek; // Résout l'erreur affichée sur image_cea32d.png
   final int totalPortsUniques;
   final int totalCrabes;
   final List<StatsEntry> topPorts;
   final List<StatsEntry> topEspeces;
+  final List<StatsEntry> topRegionsLek;
   final List<OwnerEntry> ownerOptions;
   final List<String> placeOptions;
   final List<String> labOptions;
@@ -35,10 +37,12 @@ class DashboardStatsResult {
   const DashboardStatsResult({
     required this.totalTerrain,
     required this.totalLabo,
+    required this.totalLek,
     required this.totalPortsUniques,
     required this.totalCrabes,
     required this.topPorts,
     required this.topEspeces,
+    required this.topRegionsLek,
     required this.ownerOptions,
     required this.placeOptions,
     required this.labOptions,
@@ -75,32 +79,39 @@ class StatsService {
   }) async {
     Query<Map<String, dynamic>> terrainQuery = _db.collection('terrain_forms');
     Query<Map<String, dynamic>> laboQuery = _db.collection('lab_forms');
+    Query<Map<String, dynamic>> lekQuery = _db.collection('lek_forms');
 
     if (!isAdmin && (uid ?? '').trim().isNotEmpty) {
       final safeUid = uid!.trim();
       terrainQuery = terrainQuery.where('ownerId', isEqualTo: safeUid);
       laboQuery = laboQuery.where('ownerId', isEqualTo: safeUid);
+      lekQuery = lekQuery.where('ownerId', isEqualTo: safeUid);
     } else if (isAdmin && (filters.selectedOwnerId ?? '').trim().isNotEmpty) {
       final selectedOwner = filters.selectedOwnerId!.trim();
       terrainQuery = terrainQuery.where('ownerId', isEqualTo: selectedOwner);
       laboQuery = laboQuery.where('ownerId', isEqualTo: selectedOwner);
+      lekQuery = lekQuery.where('ownerId', isEqualTo: selectedOwner);
     }
 
     final results = await Future.wait([
       terrainQuery.get(),
       laboQuery.get(),
+      lekQuery.get(),
     ]);
 
     final terrainDocs = results[0].docs;
     final laboDocs = results[1].docs;
+    final lekDocs = results[2].docs;
 
     final filteredTerrain = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
     final filteredLabo = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+    final filteredLek = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
 
     final ownerOptions = <String, String>{};
     final placeSet = <String>{};
     final labSet = <String>{};
 
+    // --- 1. PARCOURS TERRAIN ---
     for (final doc in terrainDocs) {
       final root = doc.data();
       final ownerId = (root['ownerId'] ?? '').toString().trim();
@@ -119,6 +130,7 @@ class StatsService {
       filteredTerrain.add(doc);
     }
 
+    // --- 2. PARCOURS LABO ---
     for (final doc in laboDocs) {
       final root = doc.data();
       final ownerId = (root['ownerId'] ?? '').toString().trim();
@@ -135,6 +147,34 @@ class StatsService {
       filteredLabo.add(doc);
     }
 
+    // --- 3. PARCOURS LEK ---
+    final regionLekTotals = <String, int>{};
+    for (final doc in lekDocs) {
+      final root = doc.data();
+      final ownerId = (root['ownerId'] ?? '').toString().trim();
+      final ownerName = (root['ownerName'] ?? '').toString().trim();
+      if (ownerId.isNotEmpty) {
+        ownerOptions[ownerId] = ownerName.isEmpty ? ownerId : ownerName;
+      }
+      final data = _toMap(root['data']);
+      
+      // Extraction basée sur csv_columns.dart (clés de l'enquête LEK)
+      final port = (data['portPeche'] ?? '').toString().trim();
+      final zone = (data['Zone'] ?? '').toString().trim();
+      if (port.isNotEmpty) placeSet.add(port);
+      if (zone.isNotEmpty) placeSet.add(zone);
+
+      if (!_isInRange(root, filters)) continue;
+      if (!_matchLekPlaceFilter(data, filters.selectedPlace)) continue;
+      filteredLek.add(doc);
+
+      final region = (data['region'] ?? '').toString().trim();
+      if (region.isNotEmpty) {
+        regionLekTotals[region] = (regionLekTotals[region] ?? 0) + 1;
+      }
+    }
+
+    // --- CALCULS STATISTIQUES FINAUX ---
     final uniquePorts = <String>{};
     final portTotals = <String, int>{};
     final speciesTotals = <String, int>{};
@@ -171,10 +211,12 @@ class StatsService {
     return DashboardStatsResult(
       totalTerrain: filteredTerrain.length,
       totalLabo: filteredLabo.length,
+      totalLek: filteredLek.length,
       totalPortsUniques: uniquePorts.length,
       totalCrabes: totalCrabes,
       topPorts: _toTopEntries(portTotals),
       topEspeces: _toTopEntries(speciesTotals),
+      topRegionsLek: _toTopEntries(regionLekTotals),
       ownerOptions: owners,
       placeOptions: places,
       labOptions: labs,
@@ -231,6 +273,15 @@ class StatsService {
     if (place.isEmpty || place == 'Tous') return true;
     final port = (data['gen_portPeche'] ?? '').toString().trim().toLowerCase();
     final zone = (data['gen_zone'] ?? '').toString().trim().toLowerCase();
+    final wanted = place.toLowerCase();
+    return port == wanted || zone == wanted;
+  }
+
+  bool _matchLekPlaceFilter(Map<String, dynamic> data, String? selectedPlace) {
+    final place = (selectedPlace ?? '').trim();
+    if (place.isEmpty || place == 'Tous') return true;
+    final port = (data['portPeche'] ?? '').toString().trim().toLowerCase();
+    final zone = (data['Zone'] ?? '').toString().trim().toLowerCase();
     final wanted = place.toLowerCase();
     return port == wanted || zone == wanted;
   }

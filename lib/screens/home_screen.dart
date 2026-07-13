@@ -1,12 +1,27 @@
 ﻿import 'package:flutter/material.dart';
-
+import '../services/update_service.dart';
 import '../models/user_mock.dart';
 import '../routes/app_routes.dart';
 import '../theme/app_theme.dart';
 import '../widgets/big_action_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Déclenche la vérification de mise à jour automatiquement dès que l'écran est affiché
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkAndUpdate(context);
+    });
+  }
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -25,10 +40,10 @@ class HomeScreen extends StatelessWidget {
         child: Container(
           color: AppTheme.limeYellow,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: SafeArea(
+          child: const SafeArea(
             child: Row(
               children: [
-                const Icon(Icons.person, size: 28),
+                Icon(Icons.person, size: 28),
               ],
             ),
           ),

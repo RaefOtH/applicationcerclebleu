@@ -36,27 +36,17 @@ class _AdminPdfTemplateScreenState extends State<AdminPdfTemplateScreen>
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
-    _appNameCtrl.addListener(_refreshPreview);
-    _subtitleCtrl.addListener(_refreshPreview);
-    _footerCtrl.addListener(_refreshPreview);
+    // Suppression des listeners qui causaient le setState global à chaque lettre
     _loadTemplate();
   }
 
   @override
   void dispose() {
-    _appNameCtrl.removeListener(_refreshPreview);
-    _subtitleCtrl.removeListener(_refreshPreview);
-    _footerCtrl.removeListener(_refreshPreview);
     _appNameCtrl.dispose();
     _subtitleCtrl.dispose();
     _footerCtrl.dispose();
     _waveController.dispose();
     super.dispose();
-  }
-
-  void _refreshPreview() {
-    if (!mounted) return;
-    setState(() {});
   }
 
   Future<void> _loadTemplate() async {
@@ -369,54 +359,60 @@ class _AdminPdfTemplateScreenState extends State<AdminPdfTemplateScreen>
             ),
           ),
           const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _appNameCtrl.text.trim().isEmpty
-                      ? 'Cercle Bleu'
-                      : _appNameCtrl.text.trim(),
-                  style: const TextStyle(
-                    color: Color(0xFF1E3A8A),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
+          // L'AnimatedBuilder écoute uniquement les modifications des trois contrôleurs
+          AnimatedBuilder(
+            animation: Listenable.merge([_appNameCtrl, _subtitleCtrl, _footerCtrl]),
+            builder: (context, child) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _subtitleCtrl.text.trim().isEmpty
-                      ? 'Template PDF Application'
-                      : _subtitleCtrl.text.trim(),
-                  style: const TextStyle(color: Color(0xFF334155)),
-                ),
-                const Divider(height: 22),
-                const Text(
-                  'Contenu formulaire ...',
-                  style: TextStyle(color: Color(0xFF64748B)),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  _footerCtrl.text.trim().isEmpty
-                      ? 'Document genere par Cercle Bleu'
-                      : _footerCtrl.text.trim(),
-                  style: const TextStyle(
-                    color: Color(0xFF475569),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _appNameCtrl.text.trim().isEmpty
+                          ? 'Cercle Bleu'
+                          : _appNameCtrl.text.trim(),
+                      style: const TextStyle(
+                        color: Color(0xFF1E3A8A),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _subtitleCtrl.text.trim().isEmpty
+                          ? 'Template PDF Application'
+                          : _subtitleCtrl.text.trim(),
+                      style: const TextStyle(color: Color(0xFF334155)),
+                    ),
+                    const Divider(height: 22),
+                    const Text(
+                      'Contenu formulaire ...',
+                      style: TextStyle(color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      _footerCtrl.text.trim().isEmpty
+                          ? 'Document genere par Cercle Bleu'
+                          : _footerCtrl.text.trim(),
+                      style: const TextStyle(
+                        color: Color(0xFF475569),
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          );
+         },
+        ),
+       ],
       ),
     );
   }

@@ -1,14 +1,101 @@
+import 'package:applicationstagepfe/screens/lek/unite_de_peche_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
+import '../../services/lek_form_service.dart';
 import 'impact_ecologique_page.dart';
 import 'lek_home.dart';
+
+/// Simple code/label pair used by every dropdown in this page
+/// (S/V/R/H, H/P/E/A, Aug/Dim/St/Var(année clés), Oui/Non).
+class _OptionItem {
+  final String code;
+  final String label;
+  const _OptionItem(this.code, this.label);
+}
+
+/// Holds every controller/value needed to describe ONE species block
+/// (a-1 C. Sapidus / a-2 P. segis / a-3 Les 2 espèces confondues).
+/// Having this as a small data holder lets the three identical blocks
+/// shown in the Excel sheet be built from a single piece of code.
+class _EspeceControllers {
+  final String prefix; // e.g. 'crabe_sapidus'
+
+  final anneeCtrl = TextEditingController();
+  final environnementCtrl = TextEditingController();
+  final distApparitionCtrl = TextEditingController();
+  final distActuelleCtrl = TextEditingController();
+  final profondeurCtrl = TextEditingController();
+  final zonesSensiblesCtrl = TextEditingController();
+  final tailleMoyenneCtrl = TextEditingController();
+  final zonePlusAffecteeCtrl = TextEditingController();
+  final abondanceAnneesClesCtrl = TextEditingController();
+  final tendanceAnneesClesCtrl = TextEditingController();
+
+  String? typeFond;
+  String? abondance5ans;
+  String? saisonForteAbondance;
+  String? saisonReproduction;
+  String? presenceJuveniles;
+  String? evolutionQuantites; // Oui / Non
+  String? tendance;
+
+  _EspeceControllers(this.prefix);
+
+  void loadFrom(Map<String, dynamic> data) {
+    anneeCtrl.text = (data['${prefix}_annee1ereObservation'] ?? '').toString();
+    environnementCtrl.text = (data['${prefix}_environnement'] ?? '').toString();
+    distApparitionCtrl.text =
+        (data['${prefix}_distributionApparition'] ?? '').toString();
+    distActuelleCtrl.text =
+        (data['${prefix}_distributionActuelle'] ?? '').toString();
+    profondeurCtrl.text = (data['${prefix}_profondeur'] ?? '').toString();
+    zonesSensiblesCtrl.text =
+        (data['${prefix}_zonesSensibles'] ?? '').toString();
+    tailleMoyenneCtrl.text = (data['${prefix}_tailleMoyenne'] ?? '').toString();
+    zonePlusAffecteeCtrl.text =
+        (data['${prefix}_zonePlusAffectee'] ?? '').toString();
+    abondanceAnneesClesCtrl.text =
+        (data['${prefix}_abondanceAnneesCles'] ?? '').toString();
+    tendanceAnneesClesCtrl.text =
+        (data['${prefix}_tendanceAnneesCles'] ?? '').toString();
+
+    typeFond = _nullIfEmpty(data['${prefix}_typeFond']);
+    abondance5ans = _nullIfEmpty(data['${prefix}_abondance5ans']);
+    saisonForteAbondance = _nullIfEmpty(data['${prefix}_saisonForteAbondance']);
+    saisonReproduction = _nullIfEmpty(data['${prefix}_saisonReproduction']);
+    presenceJuveniles = _nullIfEmpty(data['${prefix}_presenceJuveniles']);
+    evolutionQuantites = _nullIfEmpty(data['${prefix}_evolutionQuantites']);
+    tendance = _nullIfEmpty(data['${prefix}_tendance']);
+  }
+
+  static String? _nullIfEmpty(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  void dispose() {
+    anneeCtrl.dispose();
+    environnementCtrl.dispose();
+    distApparitionCtrl.dispose();
+    distActuelleCtrl.dispose();
+    profondeurCtrl.dispose();
+    zonesSensiblesCtrl.dispose();
+    tailleMoyenneCtrl.dispose();
+    zonePlusAffecteeCtrl.dispose();
+    abondanceAnneesClesCtrl.dispose();
+    tendanceAnneesClesCtrl.dispose();
+  }
+}
 
 class DynamiqueDuCrabePage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const DynamiqueDuCrabePage({super.key, required this.data, required this.formId});
+  const DynamiqueDuCrabePage({
+    super.key,
+    required this.data,
+    required this.formId,
+  });
 
   @override
   State<DynamiqueDuCrabePage> createState() => _DynamiqueDuCrabePageState();
@@ -16,226 +103,41 @@ class DynamiqueDuCrabePage extends StatefulWidget {
 
 class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _typeObservationOptions = [
-    'À bord',
-    'Au port',
-    'Expérimental',
+  static const List<_OptionItem> _ouiNonOptions = [
+    _OptionItem('Oui', 'Oui'),
+    _OptionItem('Non', 'Non'),
   ];
 
-  static const List<_EnginOption> _enginOptions = [
-    _EnginOption(
-      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
-      code: 'CHALUTS',
-      group: 'chalut',
-    ),
-    _EnginOption(
-      label: 'Senne tournante coulissante : PS',
-      code: 'PS',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets tournants : SUX',
-      code: 'SUX',
-      group: 'minimal',
-    ),
-    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
-    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
-    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
-    _EnginOption(
-      label: 'Trémails et maillants combinés : GTN',
-      code: 'GTN',
-      group: 'comb',
-    ),
-    _EnginOption(
-      label: 'Filets maillants dérivants : GND',
-      code: 'GND',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets maillants encerclants : GNC',
-      code: 'GNC',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
-      code: 'GTR',
-      group: 'tr',
-    ),
-    _EnginOption(
-      label: 'Filets monofilament : MoFi',
-      code: 'MoFi',
-      group: 'mofi',
-    ),
-    _EnginOption(
-      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
-      code: 'FIX',
-      group: 'fix',
-    ),
-    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
+  static const List<_OptionItem> _typeFondOptions = [
+    _OptionItem('S', 'Sable (S)'),
+    _OptionItem('V', 'Vase (V)'),
+    _OptionItem('R', 'Roche (R)'),
+    _OptionItem('H', 'Herbier (H)'),
   ];
 
-  static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
-    'chalut': const [
-      _ConditionalFieldDef('suivi_chalut_type', 'Type de chalut'),
-      _ConditionalFieldDef(
-        'suivi_chalut_longueurRalingueInf',
-        'Longueur ralingue inférieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureVerticale',
-        'Ouverture verticale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureHorizontale',
-        'Ouverture horizontale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_mailleCul',
-        'Maille de cul de chalut',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
-    ],
-    'mofi': const [
-      _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
-    ],
-    'comb': const [
-      _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
-    ],
-    'tr': const [
-      _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
-    ],
-    'fenc': const [
-      _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_fenc_hauteurChute',
-        'Hauteur (chute)',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_mailleAile',
-        'Maille aile',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_maillePoche',
-        'Maille poche',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_typeFiletTournant',
-        'Type de filet tournant',
-      ),
-      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
-    ],
-    'fix': const [
-      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
-      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
-    ],
-    'minimal': const [
-      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
-    ],
-  };
+  static const List<_OptionItem> _saisonOptions = [
+    _OptionItem('H', 'Hiver (H)'),
+    _OptionItem('P', 'Printemps (P)'),
+    _OptionItem('E', 'Été (E)'),
+    _OptionItem('A', 'Automne (A)'),
+  ];
 
-  static final Set<String> _legacyConditionalKeys = {
-    'suivi_nc_diametre',
-    'suivi_nc_hauteur',
-    'suivi_nc_ouverture',
-    'suivi_nc_maille',
-    'suivi_nc_nbre',
-    'suivi_nc_typeNasses',
-    'suivi_p_diametre',
-    'suivi_p_nbre',
-    'suivi_p_typePieges',
-  };
+  static const List<_OptionItem> _tendanceOptions = [
+    _OptionItem('Aug', 'Augmentation (Aug)'),
+    _OptionItem('Dim', 'Diminution (Dim)'),
+    _OptionItem('St', 'Stable (St)'),
+    _OptionItem('Var', 'Variable (année(s) clé(s))'),
+  ];
 
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
+  final LekFormService _service = LekFormService();
 
-  final _typeEnginAutreCtrl = TextEditingController();
-  final _nbPiecesCtrl = TextEditingController();
-  final _idNavireCtrl = TextEditingController();
-  final _idNasseCtrl = TextEditingController();
-  final _debutCtrl = TextEditingController();
-  final _finCtrl = TextEditingController();
-  final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedTypeObservation;
-  _EnginOption? _selectedEnginOption;
+  late final _EspeceControllers _sapidus = _EspeceControllers('dynamique_crabe_sapidus');
+  late final _EspeceControllers _segnis = _EspeceControllers('dynamique_crabe_segnis');
+  late final _EspeceControllers _confondues =
+      _EspeceControllers('dynamique_crabe_confondues');
+
+  String? _distinction2Especes;
 
   late AnimationController _waveController;
 
@@ -243,29 +145,13 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
   void initState() {
     super.initState();
     data = widget.data;
-    _selectedTypeObservation = _safeOption(
-      data['suivi_typeObservation'],
-      _typeObservationOptions,
-    );
-    _typeEnginAutreCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _nbPiecesCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _idNavireCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _idNasseCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _debutCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _finCtrl.text = (data['suivi_fin'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
-    _selectedEnginOption = _findEnginOption(savedLabel, savedCode);
+    _distinction2Especes =
+        _EspeceControllers._nullIfEmpty(data['dynamique_crabe_distinction2Especes']);
 
-    for (final defs in _conditionalFields.values) {
-      for (final def in defs) {
-        _dynamicCtrls.putIfAbsent(
-          def.key,
-          () => TextEditingController(text: (data[def.key] ?? '').toString()),
-        );
-      }
-    }
+    _sapidus.loadFrom(data);
+    _segnis.loadFrom(data);
+    _confondues.loadFrom(data);
 
     _waveController = AnimationController(
       vsync: this,
@@ -275,36 +161,24 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
 
   @override
   void dispose() {
-    _typeEnginAutreCtrl.dispose();
-    _nbPiecesCtrl.dispose();
-    _idNavireCtrl.dispose();
-    _idNasseCtrl.dispose();
-    _debutCtrl.dispose();
-    _finCtrl.dispose();
-    for (final ctrl in _dynamicCtrls.values) {
-      ctrl.dispose();
-    }
+    _sapidus.dispose();
+    _segnis.dispose();
+    _confondues.dispose();
     _waveController.dispose();
     super.dispose();
   }
 
-  _EnginOption? _findEnginOption(String label, String code) {
-    for (final option in _enginOptions) {
-      if (label.isNotEmpty && option.label == label) return option;
-      if (code.isNotEmpty && option.code == code) return option;
-    }
-    return null;
+  void _save(String key, String value) {
+    data[key] = value;
+    _service.scheduleFullDataSave(widget.formId, data);
   }
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
-  }
-
-  InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
+  InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
     labelText: label,
     hintText: 'Saisir ici...',
+    helperText: helperText,
+    helperMaxLines: 2,
+    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     floatingLabelAlignment: FloatingLabelAlignment.start,
@@ -316,7 +190,6 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
       color: Color(0xFF1E3A8A),
       fontWeight: FontWeight.w700,
     ),
-    suffixIcon: suffixIcon,
     filled: true,
     fillColor: const Color(0xFFF8FBFF),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -334,149 +207,250 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     ),
   );
 
-  Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-    );
-    if (picked != null) {
-      final hh = picked.hour.toString().padLeft(2, '0');
-      final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = '$hh:$mm';
-      setState(() => ctrl.text = txt);
-      data[key] = txt;
-      _service.scheduleFullDataSave(widget.formId, data);
-    }
-  }
-
-  void _onTypeEnginChanged(_EnginOption? option) {
-    setState(() => _selectedEnginOption = option);
-    if (option == null) {
-      data.remove('suivi_typeEngin');
-      data.remove('suivi_typeEnginCode');
-    } else {
-      data['suivi_typeEngin'] = option.label;
-      data['suivi_typeEnginCode'] = option.code;
-    }
-    _clearInactiveConditionalData();
-    if (option == null || option.code != 'AUTRE') {
-      _typeEnginAutreCtrl.clear();
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
-
-  void _clearInactiveConditionalData() {
-    final activeGroup = _selectedEnginOption?.group;
-    for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeGroup) continue;
-      for (final def in entry.value) {
-        data.remove(def.key);
-        _dynamicCtrls[def.key]?.clear();
-      }
-    }
-    for (final key in _legacyConditionalKeys) {
-      data.remove(key);
-    }
-  }
-
-  Widget _field({
+  Widget _textField({
     required TextEditingController controller,
     required String label,
-    required String key,
+    required String dataKey,
+    String? helperText,
     bool numeric = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      decoration: _dec(label, suffixIcon: suffixIcon),
+      decoration: _dec(label, helperText: helperText),
+      onChanged: (v) => _save(dataKey, v),
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required List<_OptionItem> options,
+    required String? value,
+    required String dataKey,
+    required ValueChanged<String?> onChanged,
+    String? helperText,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: _dec(label, helperText: helperText),
+      hint: const Text('Choisir...'),
+      items: options
+          .map(
+            (o) => DropdownMenuItem<String>(
+              value: o.code,
+              child: Text(o.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
       onChanged: (v) {
-        data[key] = v;
-        _service.scheduleFullDataSave(widget.formId, data);
+        onChanged(v);
+        _save(dataKey, v ?? '');
       },
     );
   }
 
-  Widget _buildConditionalSection() {
-    final group = _selectedEnginOption?.group;
-    if (group == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[group];
-    if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Détails type d'engin",
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
-          ),
+  // ---- Header bars matching the dark / light gray rows of the Excel sheet.
+
+  Widget _sectionHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 4, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF52565C),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 15,
         ),
-        const SizedBox(height: 12),
-        ...List.generate(defs.length, (index) {
-          final def = defs[index];
-          final widget = _field(
-            controller: _dynamicCtrls[def.key]!,
-            label: def.label,
-            key: def.key,
-            numeric: def.numeric,
-          );
-          if (index == defs.length - 1) return widget;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: widget,
-          );
-        }),
-      ],
+      ),
+    );
+  }
+
+  Widget _subHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCDEE2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _gap() => const SizedBox(height: 12);
+
+  /// Builds one full species block (a-1 / a-2 / a-3), reproducing every
+  /// row of the Excel sheet as a stacked column of fields.
+  Widget _buildEspeceSection({
+    required String sectionTitle,
+    required String evolutionLabel,
+    required _EspeceControllers c,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionHeader(sectionTitle),
+          _textField(
+            controller: c.anneeCtrl,
+            label: 'Année 1ère observation',
+            dataKey: '${c.prefix}_annee1ereObservation',
+          ),
+          _gap(),
+          _textField(
+            controller: c.environnementCtrl,
+            label: 'Environnement (T°, S%, saison..)',
+            dataKey: '${c.prefix}_environnement',
+          ),
+          _gap(),
+          _textField(
+            controller: c.distApparitionCtrl,
+            label: "Distribution à l'apparition",
+            dataKey: '${c.prefix}_distributionApparition',
+            helperText: 'Zone (carte vert pointillée)',
+          ),
+          _gap(),
+          _textField(
+            controller: c.distActuelleCtrl,
+            label: 'Distribution actuelle',
+            dataKey: '${c.prefix}_distributionActuelle',
+            helperText: 'Zone (carte vert continu)',
+          ),
+          _gap(),
+          _textField(
+            controller: c.profondeurCtrl,
+            label: 'Profondeur',
+            dataKey: '${c.prefix}_profondeur',
+            numeric: true,
+          ),
+          _gap(),
+          _dropdownField(
+            label: 'Type de fond',
+            options: _typeFondOptions,
+            value: c.typeFond,
+            dataKey: '${c.prefix}_typeFond',
+            onChanged: (v) => setState(() => c.typeFond = v),
+            helperText: 'S / V / R / H',
+          ),
+          _gap(),
+          _textField(
+            controller: c.zonesSensiblesCtrl,
+            label: 'Zones sensibles à proximité',
+            dataKey: '${c.prefix}_zonesSensibles',
+            helperText: 'AMP, herbiers, nurseries, etc.',
+          ),
+          _gap(),
+          _dropdownField(
+            label: 'Abondance depuis les 5 dernières années',
+            options: _tendanceOptions,
+            value: c.abondance5ans,
+            dataKey: '${c.prefix}_abondance5ans',
+            onChanged: (v) => setState(() => c.abondance5ans = v),
+            helperText: 'Aug / Dim / St / Var (année clés)',
+          ),
+          if (c.abondance5ans == 'Var') ...[
+            _gap(),
+            _textField(
+              controller: c.abondanceAnneesClesCtrl,
+              label: 'Année(s) clé(s)',
+              dataKey: '${c.prefix}_abondanceAnneesCles',
+            ),
+          ],
+          _gap(),
+          _dropdownField(
+            label: 'Saison de plus forte abondance',
+            options: _saisonOptions,
+            value: c.saisonForteAbondance,
+            dataKey: '${c.prefix}_saisonForteAbondance',
+            onChanged: (v) => setState(() => c.saisonForteAbondance = v),
+            helperText: 'H / P / E / A',
+          ),
+          _gap(),
+          _dropdownField(
+            label: 'Saison de reproduction',
+            options: _saisonOptions,
+            value: c.saisonReproduction,
+            dataKey: '${c.prefix}_saisonReproduction',
+            onChanged: (v) => setState(() => c.saisonReproduction = v),
+            helperText: 'H / P / E / A',
+          ),
+          _gap(),
+          _dropdownField(
+            label: 'Présence de juvéniles',
+            options: _saisonOptions,
+            value: c.presenceJuveniles,
+            dataKey: '${c.prefix}_presenceJuveniles',
+            onChanged: (v) => setState(() => c.presenceJuveniles = v),
+            helperText: 'H / P / E / A',
+          ),
+          _gap(),
+          _textField(
+            controller: c.tailleMoyenneCtrl,
+            label: 'Taille moyenne observée',
+            dataKey: '${c.prefix}_tailleMoyenne',
+            helperText: 'en cm',
+            numeric: true,
+          ),
+          _subHeader(evolutionLabel),
+          _dropdownField(
+            label: 'Evolution des quantités capturées',
+            options: _ouiNonOptions,
+            value: c.evolutionQuantites,
+            dataKey: '${c.prefix}_evolutionQuantites',
+            onChanged: (v) => setState(() => c.evolutionQuantites = v),
+            helperText: 'oui / non',
+          ),
+          if (c.evolutionQuantites == 'Oui') ...[
+            _gap(),
+            _dropdownField(
+              label: 'Tendance',
+              options: _tendanceOptions,
+              value: c.tendance,
+              dataKey: '${c.prefix}_tendance',
+              onChanged: (v) => setState(() => c.tendance = v),
+              helperText: 'Aug / Dim / St / Var (année clés)',
+            ),
+            if (c.tendance == 'Var') ...[
+              _gap(),
+              _textField(
+                controller: c.tendanceAnneesClesCtrl,
+                label: 'Année(s) clé(s)',
+                dataKey: '${c.prefix}_tendanceAnneesCles',
+              ),
+            ],
+            _gap(),
+            _textField(
+              controller: c.zonePlusAffecteeCtrl,
+              label: 'Zone la plus affectée',
+              dataKey: '${c.prefix}_zonePlusAffectee',
+              helperText: 'Nom / carte (+/-)',
+            ),
+          ],
+        ],
+      ),
     );
   }
 
   void _goNext() {
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }
+    data['dynamique_crabe_distinction2Especes'] = _distinction2Especes ?? '';
     _service.updateFormData(widget.formId, data, stepCompleted: 2);
     Navigator.push(
       context,
@@ -495,6 +469,8 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
 
   @override
   Widget build(BuildContext context) {
+    final bool showBothSpecies = _distinction2Especes != 'Non';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -540,7 +516,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                       ),
                       const SizedBox(width: 4),
                       const Text(
-                        'Suivi',
+                        'Dynamique du crabe',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -549,7 +525,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 2/5',
+                        'Étape 4/9',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
@@ -565,114 +541,52 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                     children: [
                       _sectionCard(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTypeObservation,
-                            isExpanded: true,
-                            decoration: _dec("Type d'observation"),
-                            hint: const Text('Choisir...'),
-                            items: _typeObservationOptions
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(
-                                      item,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedTypeObservation = value);
-                              if (value == null) {
-                                data.remove('suivi_typeObservation');
-                              } else {
-                                data['suivi_typeObservation'] = value;
-                              }
-                              _service.scheduleFullDataSave(
-                                widget.formId,
-                                data,
-                              );
-                            },
+                          Text(
+                            'Dynamique du crabe (photos des deux espèces)',
+                            style: const TextStyle(
+                              color: Color(0xFF1E3A8A),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<_EnginOption>(
-                            initialValue: _selectedEnginOption,
-                            isExpanded: true,
-                            decoration: _dec("Type d'engin"),
-                            hint: const Text('Choisir...'),
-                            items: _enginOptions
-                                .map(
-                                  (option) => DropdownMenuItem<_EnginOption>(
-                                    value: option,
-                                    child: Text(
-                                      option.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: _onTypeEnginChanged,
+                          const SizedBox(height: 14),
+                          _dropdownField(
+                            label: 'Distinction entre les 2 espèces',
+                            options: _ouiNonOptions,
+                            value: _distinction2Especes,
+                            dataKey: 'dynamique_crabe_distinction2Especes',
+                            onChanged: (v) =>
+                                setState(() => _distinction2Especes = v),
+                            helperText:
+                                'oui / non : si non passer à a.3',
                           ),
-                          if (_selectedEnginOption?.code == 'AUTRE') ...[
-                            const SizedBox(height: 12),
-                            _field(
-                              controller: _typeEnginAutreCtrl,
-                              label: 'Préciser',
-                              key: 'suivi_typeEnginAutre',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _sectionCard(
+                        children: [
+                          if (showBothSpecies) ...[
+                            _buildEspeceSection(
+                              sectionTitle: 'a-1 C. Sapidus',
+                              evolutionLabel:
+                                  'a-1-1-Evolution des quantités capturées '
+                                  'de crabe durant les 5 dernières années',
+                              c: _sapidus,
+                            ),
+                            _buildEspeceSection(
+                              sectionTitle: 'a-2 P. segis',
+                              evolutionLabel:
+                                  'a-2-1-Evolution des quantités capturées '
+                                  'de crabe durant les 5 dernières années',
+                              c: _segnis,
                             ),
                           ],
-                          if (_selectedEnginOption != null) ...[
-                            const SizedBox(height: 12),
-                            _buildConditionalSection(),
-                          ],
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _nbPiecesCtrl,
-                            label: 'Nombre de pièces (nasse/filet)',
-                            key: 'suivi_nbPieces',
-                            numeric: true,
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNavireCtrl,
-                            label: 'ID du navire (Nom & Immatriculation)',
-                            key: 'suivi_idNavire',
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNasseCtrl,
-                            label: 'ID de la nasse',
-                            key: 'suivi_idNasse',
-                            numeric: true,
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _debutCtrl,
-                            label: 'Opération de pêche - Début (24h)',
-                            key: 'suivi_debut',
-                            readOnly: true,
-                            onTap: () =>
-                                _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _finCtrl,
-                            label: 'Opération de pêche - Fin (24h)',
-                            key: 'suivi_fin',
-                            readOnly: true,
-                            onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_finCtrl, 'suivi_fin'),
-                            ),
+                          _buildEspeceSection(
+                            sectionTitle: 'a-3 Les 2 espèces conf',
+                            evolutionLabel:
+                                'a-3-1-Evolution des quantités capturées '
+                                'de crabe durant les 5 dernières années',
+                            c: _confondues,
                           ),
                         ],
                       ),
@@ -683,7 +597,14 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => UniteDePechePage(formId: widget.formId, data:data),
+                                    ),
+                                  );}
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -725,29 +646,9 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
-}
-
-class _EnginOption {
-  final String label;
-  final String code;
-  final String group;
-
-  const _EnginOption({
-    required this.label,
-    required this.code,
-    required this.group,
-  });
-}
-
-class _ConditionalFieldDef {
-  final String key;
-  final String label;
-  final bool numeric;
-
-  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
 }
 
 class _PrimaryGradientButton extends StatelessWidget {

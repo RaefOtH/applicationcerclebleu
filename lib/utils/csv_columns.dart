@@ -112,7 +112,7 @@ const labDataKeys = <String>[
   'remarques',
 ];
 
-const lekDataKeys = <String>[
+/*const lekDataKeys = <String>[
 "Numéro de l'interview",
 "nom de l'enquêteur",
 'Date',
@@ -136,7 +136,8 @@ const lekDataKeys = <String>[
 'barque_matricule',
 'barque_Longueur',
 'barque_puissance',
-"barque_Année d'achat (coque)",
+'barque_type_coque',
+"barque_annee_achat",
 'activité_Senne tournante coulissante: PS',
 'activité_Chaluts :CH(Crevettier, Mediterranien, GOV, pélagique)',
 'activité_Filets tournants : FT',
@@ -149,7 +150,8 @@ const lekDataKeys = <String>[
 'activité_Pièges ( gargoulettes, Verveux...):P',
 'activité_autre',
 // --- BLOC EN-TÊTE ---
-'Durée moyenne d’une marée',
+'activite_duree_maree',
+'sorties_2025',
 'Nombre de sorties en mer en 2025',
 'Nombre de sorties en mer_Janvier',
 'Nombre de sorties en mer_Février',
@@ -316,4 +318,241 @@ const lekDataKeys = <String>[
 "Etat des lieux_Principal problème rencontré",
 "Etat des lieux_Suggestion d'améliration de l'activité",
 "Niveau de confiance_niveau de confiance",
+];*/
+
+const lekDataKeys = <String>[""
+  //général
+  "gen_Numéro_de_l'interview",   // Clé exacte (Saisie numérique)
+  "gen_nom_de_l'enquêteur",      // Clé exacte (Saisie texte)
+  "gen_Date",                    // Clé exacte (Format YYYY-MM-DD)
+  "gen_DateObservation",         // Clé doublon enregistrée automatiquement avec la date
+  'gen_pays',                    // Clé exacte (Tunisie / Italie)
+  'gen_region',                  // Clé exacte (Nord / Est / Ouest / Sud)
+  'gen_portPeche',               // Clé exacte (Nom du port sélectionné ou 'Autre')
+  'gen_portPecheAutre',          // Clé exacte (Texte saisi si portPeche == 'Autre')
+  'gen_Zone',                    // Clé exacte (Nom local de la zone, majuscule sur le Z)
+  'gen_Type_Pêche',
+
+  // --- Section : Informations sur le pêcheur ---
+  'info_code_du_pecheur',           // Champ texte : Code Pêcheur
+  'info_age',                   // Champ texte/numérique : Âge
+  'info_genre',                 // Champ texte : Genre
+  'info_experience',            // Dropdown / Texte : Années d'expérience
+  'info_etat_civil',           // Champ texte : État Civil
+  'info_role_à_bord_du_bateau',            // Champ texte : Rôle à bord du bateau
+  'info_niveauInstruction',     // Champ texte : Niveau d'instruction
+  'info_cnss',                  // Champ texte : CNSS / Couverture sociale
+  'info_peche_activité', 
+  'info_peche_activité_precision',       // Dropdown / Texte : Activité principale de pêche
+  'info_zone_de_Peche',             // Dropdown / Texte : Zone de pêche fréquente
+
+
+
+  //unités_de_peche
+  // --- Section : Caractéristiques de la Barque ---
+  'unité_barque_matricule',
+  'unité_barque_longueur',
+  'unité_barque_puissance',
+  'unité_barque_type_coque',
+  'unité_barque_annee_achat',
+  'unité_Filets maillants_pourcentage',
+  'unité_Trémails_pourcentage',
+  'unité_Palangres_pourcentage',
+  'unité_Nasses_pourcentage',
+  'unité_Sennes_pourcentage',
+  'unité_Chaluts_pourcentage',
+  'unité_Autre_pourcentage',
+  'unité_code_Engin',                             // Identifiant/Type de l'engin (ex: 'Filets maillants')
+  'unité_nom_Local',                              // Champ texte : Nom local donné à l'engin
+  'unité_part_En_Pourcent',                        // Champ numérique : Part d'utilisation en %
+  'unité_espece_Cibles',                          // Champ texte : Espèces cibles
+  'unité_espece_Accessoires',                      // Champ texte : Espèces accessoires
+  'unité_nbHeure_Peche_Effective',                 // Champ numérique : Nombre d'heures de pêche effective
+  'unité_saison_Utilisation',                     // Tableau ou chaîne listant l'activation des 12 mois (Janv-Déc)
+  'unité_activite_duree_maree',
+  'unité_sorties_2025',
+  'unité_moyenne_sorties_2025',
+  'unité_fd_longueur',
+  'unité_fd_hauteur',
+  'unité_fd_maille_centrale',
+  'unité_fd_maille_exterieure',
+  'unité_fd_nb_pieces',
+  'unité_fd_nb_armements',
+  'unité_ft_longueur',
+  'unité_ft_hauteur',
+  'unité_ft_maille_aile',
+  'unité_ft_maille_poche',
+  'unité_pieges_diametre',
+  'unité_pieges_nbre',
+  'unité_nasses_diametre',
+  'unité_nasses_hauteur',
+  'unité_nasses_ouverture',
+  'unité_nasses_maille',
+  'nasses_nbre',
+  'unité_chalut_longueur_ralingue',
+  'unité_chalut_ouverture_verticale',
+  'unité_chalut_ouverture_horizontale',
+  'unité_chalut_maille_cul',
+  'unité_chalut_type',
+
+
+
+
+    //dynamique_du_crabe
+  // --- Clé Générale ---
+  'dynamique_crabe_distinction2Especes',
+  'dynamique_crabe_sapidus_annee1ereObservation',
+  'dynamique_crabe_sapidus_environnement',
+  'dynamique_crabe_sapidus_distributionApparition',
+  'dynamique_crabe_sapidus_distributionActuelle',
+  'dynamique_crabe_sapidus_profondeur',
+  'dynamique_crabe_sapidus_typeFond',
+  'dynamique_crabe_sapidus_zonesSensibles',
+  'dynamique_crabe_sapidus_abondance5ans',
+  'dynamique_crabe_sapidus_abondanceAnneesCles',
+  'dynamique_crabe_sapidus_saisonForteAbondance',
+  'dynamique_crabe_sapidus_saisonReproduction',
+  'dynamique_crabe_sapidus_presenceJuveniles',
+  'dynamique_crabe_sapidus_tailleMoyenne',
+  'dynamique_crabe_sapidus_evolutionQuantites',
+  'dynamique_crabe_sapidus_tendance',
+  'dynamique_crabe_sapidus_tendanceAnneesCles',
+  'dynamique_crabe_sapidus_zonePlusAffectee',
+  'dynamique_crabe_segnis_annee1ereObservation',
+  'dynamique_crabe_segnis_environnement',
+  'dynamique_crabe_segnis_distributionApparition',
+  'dynamique_crabe_segnis_distributionActuelle',
+  'dynamique_crabe_segnis_profondeur',
+  'dynamique_crabe_segnis_typeFond',
+  'dynamique_crabe_segnis_zonesSensibles',
+  'dynamique_crabe_segnis_abondance5ans',
+  'dynamique_crabe_segnis_abondanceAnneesCles',
+  'dynamique_crabe_segnis_saisonForteAbondance',
+  'dynamique_crabe_segnis_saisonReproduction',
+  'dynamique_crabe_segnis_presenceJuveniles',
+  'dynamique_crabe_segnis_tailleMoyenne',
+  'dynamique_crabe_segnis_evolutionQuantites',
+  'dynamique_crabe_segnis_tendance',
+  'dynamique_crabe_segnis_tendanceAnneesCles',
+  'dynamique_crabe_segnis_zonePlusAffectee',
+  'dynamique_crabe_confondues_annee1ereObservation',
+  'dynamique_crabe_confondues_environnement',
+  'dynamique_crabe_confondues_distributionApparition',
+  'dynamique_crabe_confondues_distributionActuelle',
+  'dynamique_crabe_confondues_profondeur',
+  'dynamique_crabe_confondues_typeFond',
+  'dynamique_crabe_confondues_zonesSensibles',
+  'dynamique_crabe_confondues_abondance5ans',
+  'dynamique_crabe_confondues_abondanceAnneesCles',
+  'dynamique_crabe_confondues_saisonForteAbondance',
+  'dynamique_crabe_confondues_saisonReproduction',
+  'dynamique_crabe_confondues_presenceJuveniles',
+  'dynamique_crabe_confondues_tailleMoyenne',
+  'dynamique_crabe_confondues_evolutionQuantites',
+  'dynamique_crabe_confondues_tendance',
+  'dynamique_crabe_confondues_tendanceAnneesCles',
+  'dynamique_crabe_confondues_zonePlusAffectee',
+
+    //impact_écologique
+  // --- Section : Impact sur les habitats ---
+  'impact_ecologique_habitats_ouiNon',                  // Dropdown : Oui / Non
+  'impact_ecologique_habitats_herbiersDisparaissent',   // Score numérique (1-5 avec +/- optionnel)
+  'impact_ecologique_habitats_fondSeCreuse',            // Score numérique (1-5 avec +/- optionnel)
+  'impact_ecologique_habitats_retourneLeFond',          // Score numérique (1-5 avec +/- optionnel)
+  'impact_ecologique_habitats_autreTexte',               // Champ texte : Précision si autre impact
+  'impact_ecologique_habitats_autreScore',              // Score numérique lié à l'autre impact (1-5)
+  'impact_ecologique_biodiversite_ouiNon',              // Dropdown : Oui / Non
+  'impact_ecologique_biodiversite_tendance',           // Dropdown : Aug / Dim / St / Var
+  'impact_ecologique_biodiversite_tendanceAnneesCles',  // Champ texte : Rempli uniquement si tendance == 'Var'
+  'impact_ecologique_biodiversite_depuisQuand',         // Champ numérique : Année
+  'impact_ecologique_biodiversite_zonePlusAffectee',     // Champ texte : Nom ou carte
+  'impact_ecologique_biodiversite_espece1_nom',         // Champ texte : Nom de l'espèce 1
+  'impact_ecologique_biodiversite_espece1_score',       // Score numérique de l'espèce 1 (1-5)
+  'impact_ecologique_biodiversite_espece2_nom',         // Champ texte : Nom de l'espèce 2
+  'impact_ecologique_biodiversite_espece2_score',       // Score numérique de l'espèce 2 (1-5)
+  'impact_ecologique_biodiversite_espece3_nom',         // Champ texte : Nom de l'espèce 3
+  'impact_ecologique_biodiversite_espece3_score',       // Score numérique de l'espèce 3 (1-5)
+
+    //impact_sur_la_pêche
+  // --- Section : Dégâts / gêne générale ---
+  'impact_peche_degatsEngins',                          // Dropdown : Jamais / Rarement / Souvent
+  'impact_peche_enginPlusImpacte',                     // Champ texte
+  'impact_peche_degatsPhysiquePecheur_ouiNon',          // Dropdown : Oui / Non
+  'impact_peche_degatsPhysiquePecheur_description',     // Champ texte (si Oui)
+  'impact_peche_augmentationCharge_ouiNon',             // Dropdown : Oui / Non
+  'impact_peche_augmentationCharge_description',        // Champ texte (si Oui)
+  'impact_peche_degatsPhysiqueCaptures_ouiNon',         // Dropdown : Oui / Non
+  'impact_peche_evolutionCapturesTotales_ouiNon',       // Dropdown : Oui / Non
+  'impact_peche_evolutionCapturesTotales_tendance',     // Dropdown : Aug / Dim / St / Var
+  'impact_peche_evolutionCapturesTotales_tendanceAnneesCles', // Champ texte (si Var)
+  'impact_peche_evolutionCapturesTotales_depuisQuand',  // Champ texte / année
+  'impact_peche_evolutionCapturesTotales_espece1',      // Champ texte (Espèce dominante 1)
+  'impact_peche_evolutionCapturesTotales_espece2',      // Champ texte (Espèce dominante 2)
+  'impact_peche_evolutionCapturesTotales_espece3',      // Champ texte (Espèce dominante 3)
+  'impact_peche_evolutionTailleEspeces_ouiNon',         // Dropdown : Oui / Non
+  'impact_peche_evolutionTailleEspeces_tendance',       // Dropdown : Aug / Dim / St / Var
+  'impact_peche_evolutionTailleEspeces_tendanceAnneesCles', // Champ texte (si Var)
+  'impact_peche_evolutionTailleEspeces_depuisQuand',    // Champ texte / année
+  'impact_peche_evolutionTailleEspeces_zonePlusAffectee', // Champ texte
+  'impact_peche_evolutionTailleEspeces_espece1_nom',    // Champ texte (Nom espèce affectée 1)
+  'impact_peche_evolutionTailleEspeces_espece1_signe',  // Signe : + ou - (Espèce affectée 1)
+  'impact_peche_evolutionTailleEspeces_espece2_nom',    // Champ texte (Nom espèce affectée 2)
+  'impact_peche_evolutionTailleEspeces_espece2_signe',  // Signe : + ou - (Espèce affectée 2)
+  'impact_peche_evolutionTailleEspeces_espece3_nom',    // Champ texte (Nom espèce affectée 3)
+  'impact_peche_evolutionTailleEspeces_espece3_signe',  // Signe : + ou - (Espèce affectée 3)
+  'impact_peche_acceptationCrabe',                      // Dropdown : Non / ± / Bonne
+  'impact_peche_tendanceValeur',                        // Dropdown : Aug / Dim / St / Var
+  'impact_peche_tendanceValeurAnneesCles',              // Champ texte (si Var)
+  'impact_peche_prixVenteConsommateur',                 // Champ numérique (DT)
+  'impact_peche_prixIndustrie',                         // Champ numérique (DT)
+  'impact_peche_prixIntermediaireMareyeurs',            // Champ numérique (DT)
+  'impact_peche_tendanceRentabilite',                   // Dropdown : Aug / Dim / St
+  'impact_peche_tendanceChiffreAffaire',                // Dropdown : Aug / Dim / St
+  'impact_peche_variationChiffreAffaire',              // Champ numérique (%)
+  'impact_peche_tendanceDepenses',                      // Dropdown : Aug / Dim / St
+  'impact_peche_variationDepenses',                     // Champ numérique (%)
+
+  //adaptation_locale
+  "adaptation_modificationPratiques",
+  'adaptation_modificationEngins',
+  'adaptation_typeModificationEngins',
+  'adaptation_enginsHorsUsage_ouiNon',
+  'adaptation_enginsHorsUsage_nom',
+  'adaptation_nouveauxEngins',
+  'adaptation_changementZone',
+  'adaptation_changementCalendrier_ouiNon',
+  'adaptation_especesCibles',
+  'adaptation_saisonPeche',
+  'adaptation_autresPreciser',
+  'adaptation_efficacite',
+
+
+  //état_des_lieux
+  'etatlieux_perceptionCrabe',
+  'etatlieux_etatGestionCrabe',
+  'etatlieux_interetImplicationGestion',
+  'etatlieux_affiliation_ouiNon',
+  'etatlieux_affiliation_type',
+  'etatlieux_reglementationAdequate',
+  'etatlieux_mesuresGestionProposees',
+  'etatlieux_blooms_ouiNon',
+  'etatlieux_blooms_annee',
+  'etatlieux_pollutions_ouiNon',
+  'etatlieux_pollutions_type',
+  'etatlieux_etatMilieuEaux',
+  'etatlieux_etatFond',
+  'etatlieux_problemesCommercialisation_ouiNon',
+  'etatlieux_problemesCommercialisation_preciser',
+  'etatlieux_principalProbleme',
+  'etatlieux_suggestionAmelioration',
+
+  //niveaudeconfiance
+  // --- Section : Niveau de confiance & Remarques ---
+  'Niveau_de_confiance', // Champ texte : Remarques / Évaluation finale du niveau de confiance
+
+
 ];
+
+
+
+

@@ -155,23 +155,23 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
     super.initState();
     data = widget.data;
 
-    _numeroInterviewCtrl.text = (data["Numéro de l'interview"] ?? '').toString();
-    _idEnqueteurCtrl.text = (data["nom de l'enquêteur"] ?? '').toString();
-    _dateCtrl.text = (data['Date'] ?? '').toString();
-    _paysCtrl.text = (data['pays'] ?? '').toString();
-    _regionCtrl.text = (data['region'] ?? '').toString();
-    _portPecheCtrl.text = (data['portPeche'] ?? '').toString();
-    _portPecheAutreCtrl.text = (data['portPecheAutre'] ?? '').toString();
-    _zoneCtrl.text = (data['Zone'] ?? '').toString();
-    _typePecheCtrl.text = (data['typePeche'] ?? '').toString();
+    _numeroInterviewCtrl.text = (data["gen_Numéro_de_l'interview"] ?? '').toString();
+    _idEnqueteurCtrl.text = (data["gen_nom_de_l'enquêteur"] ?? '').toString();
+    _dateCtrl.text = (data["gen_Date"] ?? '').toString();
+    _paysCtrl.text = (data["gen_pays"] ?? '').toString();
+    _regionCtrl.text = (data["gen_region"] ?? '').toString();
+    _portPecheCtrl.text = (data["gen_portPeche"] ?? '').toString();
+    _portPecheAutreCtrl.text = (data["gen_portPecheAutre"] ?? '').toString();
+    _zoneCtrl.text = (data["gen_Zone"] ?? '').toString();
+    _typePecheCtrl.text = (data["gen_Type_Pêche"] ?? '').toString();
 
-    _selectedPays = _normalizeStringOption(data['pays'], _paysOptions);
+    _selectedPays = _normalizeStringOption(data["gen_pays"], _paysOptions);
     _selectedPays=='Tunisie' ?
     _selectedRegion = _normalizeStringOption(
-      data['region'],
+      data["gen_region"],
       _regionOptionsT,
     ) : _selectedRegion = _normalizeStringOption(
-      data['region'],
+      data["gen_region"],
       _regionOptionsI,
     );
     
@@ -179,8 +179,8 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
     final currentPortsI = _portsByRegionI[_selectedRegion] ?? const <String>[];
     final currentPortsT = _portsByRegionT[_selectedRegion] ?? const <String>[];
 
-    final savedPort = (data['portPeche'] ?? '').toString().trim();
-    final savedPortAutre = (data['portPecheAutre'] ?? '').toString().trim();
+    final savedPort = (data["gen_portPeche"] ?? '').toString().trim();
+    final savedPortAutre = (data["gen_portPecheAutre"] ?? '').toString().trim();
     
     if(_selectedPays=='Tunisie'){
       if (currentPortsT.contains(savedPort)) {
@@ -250,44 +250,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
     return '$yyyy-$mm-$dd';
   }
 
-  String? _countryCode(String? country) {
-    switch (country) {
-      case 'Tunisie':
-        return 'Tun';
-      case 'Italie':
-        return 'Ita';
-      default:
-        return null;
-    }
-  }
-
-  String? _regionCode(String? region) {
-    switch (region) {
-      case 'Nord':
-        return 'Nor';
-      case 'Est':
-        return 'Est';
-      case 'Ouest':
-        return 'Ouest';
-      case 'Sud':
-        return 'Sud';
-      default:
-        return null;
-    }
-  }
-
-  String _portCode(String? port) {
-    final value = (port ?? '').trim();
-    if (value.isEmpty) return '';
-    final sanitized = value.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
-    if (sanitized.isEmpty) return '';
-    final code = sanitized.substring(
-      0,
-      sanitized.length >= 3 ? 3 : sanitized.length,
-    );
-    final normalized = code[0].toUpperCase() + code.substring(1).toLowerCase();
-    return normalized;
-  }
 
   List<String> _portsForSelectedRegion() {
     if(_selectedPays=='Tunisie'){
@@ -300,69 +262,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
 
   bool get _isAutrePortSelected => _selectedPortPeche == 'Autre (préciser)';
 
-  String _effectivePortForId() {
-    if (_isAutrePortSelected) {
-      return _portPecheAutreCtrl.text.trim();
-    }
-    return (_selectedPortPeche ?? '').trim();
-  }
-
-  DateTime? _parseGenDate(String raw) {
-    final value = raw.trim();
-    if (value.isEmpty) return null;
-    final parsed = DateTime.tryParse(value);
-    if (parsed != null) return parsed;
-    final parts = value.split('/');
-    if (parts.length == 3) {
-      final day = int.tryParse(parts[0]);
-      final month = int.tryParse(parts[1]);
-      final year = int.tryParse(parts[2]);
-      if (day != null && month != null && year != null) {
-        final fullYear = year < 100 ? (2000 + year) : year;
-        return DateTime(fullYear, month, day);
-      }
-    }
-    return null;
-  }
-
-  String _formatDateForId(DateTime date) {
-    final dd = date.day.toString().padLeft(2, '0');
-    final mm = date.month.toString().padLeft(2, '0');
-    final yy = (date.year % 100).toString().padLeft(2, '0');
-    return '$dd/$mm/$yy';
-  }
-
-/*
-  void _updateGeneratedObservationId() {
-    final country = _countryCode(_selectedPays);
-    final region = _regionCode(_selectedRegion);
-    final port = _portCode(_effectivePortForId());
-    final date = _parseGenDate(_dateCtrl.text);
-    if (country == null ||
-        region == null ||
-        port.isEmpty ||
-        date == null) {
-      setState(() {
-        _numeroInterviewCtrl.text = '';
-        _numeroInterviewHint =
-            "Numero de l'interview en attente: renseignez pays, région, port, date et le type de pêche.";
-      });
-      data.remove('gen_numeroInterview');
-      data.remove('InterviewNum');
-      data.remove('InterviewDate');
-      return;
-    }
-
-    final generated =
-        '$country-$region-$port-${_formatDateForId(date)}';
-    setState(() {
-      _numeroInterviewCtrl.text = generated;
-      _numeroInterviewHint = 'Numéro Interview généré automatiquement';
-    });
-    data['gen_numeroInterview'] = generated;
-    data['InterviewNum'] = generated;
-    data['InterviewDate'] = _formatYyyyMmDd(date);
-  }*/
 
   bool _validateGeneratedObservationId() {
     if (_selectedRegion == null) {
@@ -409,8 +308,8 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
     if (picked != null) {
       final txt = _formatYyyyMmDd(picked);
       setState(() => _dateCtrl.text = txt);
-      data['Date'] = txt;
-      data['observationDate'] = txt;
+      data["gen_Date"] = txt;
+      data["gen_DateObservation"] = txt;
       //_updateGeneratedObservationId();
       _service.scheduleFullDataSave(widget.formId, data);
     }
@@ -501,6 +400,12 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
       isExpanded: true,
       decoration: _dec(label),
       hint: const Text('Choisir...'),
+      validator: (value) {
+        if (value == null && label=='Région'){
+          return 'Veuillez sélectionner une région !';
+        }
+        return null;
+      },
       items: options
           .map(
             (item) => DropdownMenuItem<String>(
@@ -612,21 +517,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
                               );
                             },
                           ),
-                          
-                          const SizedBox(height: 6),
-                          /*Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _numeroInterviewHint ?? 'Num généré automatiquement',
-                              style: TextStyle(
-                                color: _numeroInterviewCtrl.text.trim().isEmpty
-                                    ? const Color(0xFF64748B)
-                                    : const Color(0xFF0F766E),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),*/
 
                           const SizedBox(height: 12),
                           TextFormField(
@@ -651,16 +541,38 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
                             options: _paysOptions,
                             value: _selectedPays,
                             onChanged: (v) {
-                              setState(() => _selectedPays = v);
+                              setState(() {
+                                _selectedPays = v;
+                                // 1. Réinitialisation des états région et port
+                                _selectedRegion = null;
+                                _selectedPortPeche = null;
+                              });
+
+                              // 2. Nettoyage des contrôleurs de texte associés
+                              _regionCtrl.clear();
+                              _portPecheCtrl.clear();
+                              _portPecheAutreCtrl.clear();
+                              _zoneCtrl.clear();
+
+                              // 3. Suppression des clés de la map locale "data"
+                              data.remove('region');
+                              data.remove('portPeche');
+                              data.remove('portPecheAutre');
+                              data.remove('Zone');
+
                               if (v != null) {
                                 _paysCtrl.text = v;
                                 data['pays'] = v;
-                                //_updateGeneratedObservationId();
-                                _service.scheduleFullDataSave(
-                                  widget.formId,
-                                  data,
-                                );
+                              } else {
+                                _paysCtrl.clear();
+                                data.remove('pays');
                               }
+
+                              // Sauvegarde des données vidées
+                              _service.scheduleFullDataSave(
+                                widget.formId,
+                                data,
+                              );
                             },
                           ),
 
@@ -684,7 +596,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
                               }
                               data.remove('portPeche');
                               data.remove('portPecheAutre');
-                              //_updateGeneratedObservationId();
                               _service.scheduleFullDataSave(
                                 widget.formId,
                                 data,
@@ -694,6 +605,7 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
 
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
+                            key: ValueKey(_selectedRegion), // Permet de forcer la reconstruction du dropdown Port quand la région change (ou s'annule)
                             initialValue: _selectedPortPeche,
                             isExpanded: true,
                             decoration: _dec('Port de Pêche'),
@@ -742,7 +654,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
                                       data.remove('portPecheAutre');
                                     }
                           
-                                    //_updateGeneratedObservationId();
                                     _service.scheduleFullDataSave(
                                       widget.formId,
                                       data,
@@ -758,7 +669,6 @@ class _InformationsGeneralesPageState extends State<InformationsGeneralesPage>
                               onChanged: (v) {
                                 data['portPeche'] = 'Autre';
                                 data['portPecheAutre'] = v;
-                                //_updateGeneratedObservationId();
                                 _service.scheduleFullDataSave(
                                   widget.formId,
                                   data,

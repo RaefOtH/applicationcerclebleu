@@ -8,6 +8,7 @@ import 'routes/app_routes.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -21,6 +22,7 @@ void main() async {
       'storageBucket=${opts.storageBucket}',
     );
   }
+  //await UpdateService.checkAndUpdate();
   runApp(const MyApp());
 }
 

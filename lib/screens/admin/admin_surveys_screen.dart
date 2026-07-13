@@ -9,6 +9,7 @@ import 'widgets/admin_role_guard.dart';
 import '../../services/firestore_db.dart';
 import '../../services/export_service.dart';
 import '../../utils/csv_columns.dart';
+import 'dart:async';
 
 class AdminSurveysScreen extends StatefulWidget {
   const AdminSurveysScreen({super.key});
@@ -33,6 +34,8 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
   bool _showFilters = false;
   bool _isExporting = false;
   int _exportLoaded = 0;
+  Timer? _debounce;
+
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -780,8 +784,14 @@ class _AdminSurveysScreenState extends State<AdminSurveysScreen> {
                                       const SizedBox(height: 8),
                                       TextField(
                                         controller: _searchController,
-                                        onChanged: (_) =>
-                                            setState(_applyFilters),
+                                        onChanged: (value) {
+                                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                          _debounce = Timer(const Duration(milliseconds: 1000), () {
+                                            setState( () {
+                                              _applyFilters();
+                                            });
+                                          });
+                                        },
                                         decoration: const InputDecoration(
                                           labelText:
                                               'Recherche (titre/chercheur/lieu)',

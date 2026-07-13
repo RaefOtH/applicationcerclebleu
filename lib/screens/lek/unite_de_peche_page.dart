@@ -1,8 +1,42 @@
+import 'package:applicationstagepfe/screens/lek/info_page.dart';
 import 'package:flutter/material.dart';
-
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
-import 'lek_home.dart';
+import '../../services/lek_form_service.dart';
+import 'dynamique_du_crabe_page.dart';
+
+
+// 1. DÉCLARATION DE LA CLASSE D'OBJET EN DEHORS DE LA CLASSE DE PAGE POUR ÉVITER LES ERREURS DE TYPE
+class EnginDePeche {
+  final String codeEngin;
+  String nomLocal;
+  double? partEnPourcent;
+  String especeCibles;
+  String especeAccessoires;
+  List<bool> saisonUtilisation;
+  int? nbHeurePecheEffective;
+
+  EnginDePeche({
+    required this.codeEngin,
+    this.nomLocal = '',
+    this.partEnPourcent,
+    this.especeCibles = '',
+    this.especeAccessoires = '',
+    List<bool>? saisonUtilisation,
+    this.nbHeurePecheEffective,
+  }) : saisonUtilisation = saisonUtilisation ?? List.generate(12, (_) => false);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'codeEngin': codeEngin,
+      'nomLocal': nomLocal,
+      'partEnPourcent': partEnPourcent,
+      'especeCibles': especeCibles,
+      'especeAccessoires': especeAccessoires,
+      'saisonUtilisation': saisonUtilisation,
+      'nbHeurePecheEffective': nbHeurePecheEffective,
+    };
+  }
+}
 
 class UniteDePechePage extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -15,310 +49,149 @@ class UniteDePechePage extends StatefulWidget {
 
 class _UniteDePechePageState extends State<UniteDePechePage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _typeObservationOptions = [
-    'À bord',
-    'Au port',
-    'Expérimental',
-  ];
-
-  static const List<_EnginOption> _enginOptions = [
-    _EnginOption(
-      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
-      code: 'CHALUTS',
-      group: 'chalut',
-    ),
-    _EnginOption(
-      label: 'Senne tournante coulissante : PS',
-      code: 'PS',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets tournants : SUX',
-      code: 'SUX',
-      group: 'minimal',
-    ),
-    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
-    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
-    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
-    _EnginOption(
-      label: 'Trémails et maillants combinés : GTN',
-      code: 'GTN',
-      group: 'comb',
-    ),
-    _EnginOption(
-      label: 'Filets maillants dérivants : GND',
-      code: 'GND',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets maillants encerclants : GNC',
-      code: 'GNC',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
-      code: 'GTR',
-      group: 'tr',
-    ),
-    _EnginOption(
-      label: 'Filets monofilament : MoFi',
-      code: 'MoFi',
-      group: 'mofi',
-    ),
-    _EnginOption(
-      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
-      code: 'FIX',
-      group: 'fix',
-    ),
-    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
-  ];
-
-  static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
-    'chalut': const [
-      _ConditionalFieldDef('suivi_chalut_type', 'Type de chalut'),
-      _ConditionalFieldDef(
-        'suivi_chalut_longueurRalingueInf',
-        'Longueur ralingue inférieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureVerticale',
-        'Ouverture verticale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureHorizontale',
-        'Ouverture horizontale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_mailleCul',
-        'Maille de cul de chalut',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
-    ],
-    'mofi': const [
-      _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
-    ],
-    'comb': const [
-      _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
-    ],
-    'tr': const [
-      _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
-    ],
-    'fenc': const [
-      _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_fenc_hauteurChute',
-        'Hauteur (chute)',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_mailleAile',
-        'Maille aile',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_maillePoche',
-        'Maille poche',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_typeFiletTournant',
-        'Type de filet tournant',
-      ),
-      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
-    ],
-    'fix': const [
-      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
-      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
-    ],
-    'minimal': const [
-      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
-    ],
-  };
-
-  static final Set<String> _legacyConditionalKeys = {
-    'suivi_nc_diametre',
-    'suivi_nc_hauteur',
-    'suivi_nc_ouverture',
-    'suivi_nc_maille',
-    'suivi_nc_nbre',
-    'suivi_nc_typeNasses',
-    'suivi_p_diametre',
-    'suivi_p_nbre',
-    'suivi_p_typePieges',
-  };
-
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
+  final LekFormService _service = LekFormService();
+  final _formKey = GlobalKey<FormState>();
 
-  
-  final _aMatriculeCtrl = TextEditingController();
-  final _aLongueurCtrl = TextEditingController();
-  final _aPuissanceCtrl = TextEditingController();
-  final _aTypeCoqueCtrl = TextEditingController();
-  final _aAnneeAchatCtrl = TextEditingController();
-  final _bNomCtrl = TextEditingController();
-  final _bPartCtrl = TextEditingController();
-  final _bEspeceCCtrl = TextEditingController();
-  final _bEspeceACtrl = TextEditingController();
-  final _bSaisonCtrl = TextEditingController();
-  final _bNbHeureCtrl = TextEditingController();
-  final _bDureeMareeCtrl = TextEditingController();
+  // Controllers: a) Barque
+  final _matriculeCtrl = TextEditingController();
+  final _longueurBarqueCtrl = TextEditingController();
+  final _puissanceCtrl = TextEditingController();
+  final _typeCoqueCtrl = TextEditingController();
+  final _anneeAchatCtrl = TextEditingController();
 
-  final _bNbSortiesJanvierCtrl = TextEditingController();
-  final _bNbSortiesFevrierCtrl = TextEditingController();
-  final _bNbSortiesMarsCtrl = TextEditingController();
-  final _bNbSortiesAvrilCtrl = TextEditingController();
-  final _bNbSortiesMaiCtrl = TextEditingController();
-  final _bNbSortiesJuinCtrl = TextEditingController();
-  final _bNbSortiesJuilletCtrl = TextEditingController();
-  final _bNbSortiesAoutCtrl = TextEditingController();
-  final _bNbSortiesSeptembreCtrl = TextEditingController();
-  final _bNbSortiesOctobreCtrl = TextEditingController();
-  final _bNbSortiesNovembreCtrl = TextEditingController();
-  final _bNbSortiesDecembreCtrl = TextEditingController();
+  // Controllers: b) Activité
+  final _dureeMareeCtrl = TextEditingController();
+  final Map<String, TextEditingController> _sortiesControllers = {
+    'Janvier': TextEditingController(),
+    'Février': TextEditingController(),
+    'Mars': TextEditingController(),
+    'Avril': TextEditingController(),
+    'Mai': TextEditingController(),
+    'Juin': TextEditingController(),
+    'Juillet': TextEditingController(),
+    'Août': TextEditingController(),
+    'Septembre': TextEditingController(),
+    'Octobre': TextEditingController(),
+    'Novembre': TextEditingController(),
+    'Décembre': TextEditingController(),
+  };
+  double _moyenneSorties = 0.0;
 
-  final _cFdLongueurCtrl = TextEditingController();
-  final _cFdHauteurCtrl = TextEditingController();
-  final _cFdMailleCCtrl = TextEditingController();
-  final _cFdMailleECtrl = TextEditingController();
-  final _cFdNbPieceCtrl = TextEditingController();
-  final _cFdNbArmCtrl = TextEditingController();
+  // Controllers: c) Caractéristiques de l'engin
+  final _filetsDroitsLongCtrl = TextEditingController();
+  final _filetsDroitsHautCtrl = TextEditingController();
+  final _filetsDroitsMailleCentCtrl = TextEditingController();
+  final _filetsDroitsMailleExtCtrl = TextEditingController();
+  final _filetsDroitsNbPiecesCtrl = TextEditingController();
+  final _filetsDroitsNbArmementsCtrl = TextEditingController();
 
-  final _cFtLongueurCtrl = TextEditingController();
-  final _cFtHauteurCtrl = TextEditingController();
-  final _cFtMailleACtrl = TextEditingController();
-  final _cFtMaillePCtrl = TextEditingController();
+  final _filetsTournantsLongCtrl = TextEditingController();
+  final _filetsTournantsHautCtrl = TextEditingController();
+  final _filetsTournantsMailleAileCtrl = TextEditingController();
+  final _filetsTournantsMaillePocheCtrl = TextEditingController();
 
-  final _cPDiametreCtrl = TextEditingController();
-  final _cPNombreCtrl = TextEditingController();
+  final _piegesDiametreCtrl = TextEditingController();
+  final _piegesNbreCtrl = TextEditingController();
 
-  final _cNDiametreCtrl = TextEditingController();
-  final _cNHauteurCtrl = TextEditingController();
-  final _cNOuvertureCtrl = TextEditingController();
-  final _cNMailleCtrl = TextEditingController();
-  final _cNNombreCtrl = TextEditingController();
+  final _nassesDiametreCtrl = TextEditingController();
+  final _nassesHauteurCtrl = TextEditingController();
+  final _nassesOuvertureCtrl = TextEditingController();
+  final _nassesMailleCtrl = TextEditingController();
+  final _nassesNbreCtrl = TextEditingController();
 
-  final _cCLongueurCtrl = TextEditingController();
-  final _cCOuvertureVCtrl = TextEditingController();
-  final _cCOuvertureHCtrl = TextEditingController();
-  final _cCMailleCtrl = TextEditingController();
-  final _cCTypeCtrl = TextEditingController();
+  final _chalutLongRalingueCtrl = TextEditingController();
+  final _chalutOuvVertCtrl = TextEditingController();
+  final _chalutOuvHorizCtrl = TextEditingController();
+  final _chalutMailleCulCtrl = TextEditingController();
+  final _chalutTypeCtrl = TextEditingController();
 
-
-  
-  final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedTypeObservation;
-  _EnginOption? _selectedEnginOption;
-
+  final List<String> _moisLettres = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+  late final List<EnginDePeche> _listeEngins;
   late AnimationController _waveController;
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    _selectedTypeObservation = _safeOption(
-      data['suivi_typeObservation'],
-      _typeObservationOptions,
-    );/*
-    _CodePecheurCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _AgeCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _GenreCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _ExperienceCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _EtatCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _RoleCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _NiveauCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _Cnsstrl.text = (data['suivi_fin'] ?? '').toString();
-    _PecheActCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _ZoneCtrl.text = (data['suivi_fin'] ?? '').toString();*/
+ 
+    // Chargement Barque
+    _matriculeCtrl.text = (data['unité_barque_matricule'] ?? '').toString();
+    _longueurBarqueCtrl.text = (data['unité_barque_longueur'] ?? '').toString();
+    _puissanceCtrl.text = (data['unité_barque_puissance'] ?? '').toString();
+    _typeCoqueCtrl.text = (data['unité_barque_type_coque'] ?? '').toString();
+    _anneeAchatCtrl.text = (data['unité_barque_annee_achat'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
-    //_selectedEnginOption = _findEnginOption(savedLabel, savedCode);
+    // Chargement Activité
+    _dureeMareeCtrl.text = (data['unité_activite_duree_maree'] ?? '').toString();
 
-    for (final defs in _conditionalFields.values) {
-      for (final def in defs) {
-        _dynamicCtrls.putIfAbsent(
-          def.key,
-          () => TextEditingController(text: (data[def.key] ?? '').toString()),
-        );
+    if (data['unité_sorties_2025'] != null) {
+      final Map<dynamic, dynamic> savedSorties = data['unité_sorties_2025'];
+      savedSorties.forEach((mois, valeur) {
+        if (_sortiesControllers.containsKey(mois)) {
+          _sortiesControllers[mois]!.text = valeur.toString();
+        }
+      });
+    }
+    _calculerMoyenneSorties();
+
+    // Initialisation Liste Engins
+    _listeEngins = [
+      EnginDePeche(codeEngin: 'Senne tournante coulissante: PS'),
+      EnginDePeche(codeEngin: 'Chaluts : CH (Crevettier, Mediterranien, GOV, pélagique)'),
+      EnginDePeche(codeEngin: 'Filets tournants : FT'),
+      EnginDePeche(codeEngin: 'Trémails et maillants combinés: TMC'),
+      EnginDePeche(codeEngin: 'Filets maillants dérivants: MD'),
+      EnginDePeche(codeEngin: 'Filets maillants encerclants: MEC'),
+      EnginDePeche(codeEngin: 'Trémails: TR (poisson, Crevettes, Seiche)'),
+      EnginDePeche(codeEngin: 'Filets monofilament: MoFi'),
+      EnginDePeche(codeEngin: 'Nasses (casiers): NC'),
+      EnginDePeche(codeEngin: 'Pièges (gargoulettes, Verveux...): P'),
+      EnginDePeche(codeEngin: 'autre'),
+    ];
+
+    if (data['engins_peche'] != null) {
+      final List<dynamic> savedEngins = data['engins_peche'];
+      for (int i = 0; i < _listeEngins.length && i < savedEngins.length; i++) {
+        final saved = savedEngins[i] as Map<String, dynamic>;
+        _listeEngins[i].nomLocal = saved['unité_nom_Local'] ?? '';
+        _listeEngins[i].partEnPourcent = (saved['unité_part_En_Pourcent'] as num?)?.toDouble();
+        _listeEngins[i].especeCibles = saved['unité_espece_Cibles'] ?? '';
+        _listeEngins[i].especeAccessoires = saved['unité_espece_Accessoires'] ?? '';
+        if (saved['unité_saison_Utilisation'] != null) {
+          _listeEngins[i].saisonUtilisation = List<bool>.from(saved['unité_saison_Utilisation']);
+        }
+        _listeEngins[i].nbHeurePecheEffective = saved['unité_nbHeure_Peche_Effective'] as int?;
       }
     }
+
+    // Chargement Caractéristiques Engins
+    _filetsDroitsLongCtrl.text = (data['unité_fd_longueur'] ?? '').toString();
+    _filetsDroitsHautCtrl.text = (data['unité_fd_hauteur'] ?? '').toString();
+    _filetsDroitsMailleCentCtrl.text = (data['unité_fd_maille_centrale'] ?? '').toString();
+    _filetsDroitsMailleExtCtrl.text = (data['unité_fd_maille_exterieure'] ?? '').toString();
+    _filetsDroitsNbPiecesCtrl.text = (data['unité_fd_nb_pieces'] ?? '').toString();
+    _filetsDroitsNbArmementsCtrl.text = (data['unité_fd_nb_armements'] ?? '').toString();
+
+    _filetsTournantsLongCtrl.text = (data['unité_ft_longueur'] ?? '').toString();
+    _filetsTournantsHautCtrl.text = (data['unité_ft_hauteur'] ?? '').toString();
+    _filetsTournantsMailleAileCtrl.text = (data['unité_ft_maille_aile'] ?? '').toString();
+    _filetsTournantsMaillePocheCtrl.text = (data['unité_ft_maille_poche'] ?? '').toString();
+
+    _piegesDiametreCtrl.text = (data['unité_pieges_diametre'] ?? '').toString();
+    _piegesNbreCtrl.text = (data['unité_pieges_nbre'] ?? '').toString();
+
+    _nassesDiametreCtrl.text = (data['unité_nasses_diametre'] ?? '').toString();
+    _nassesHauteurCtrl.text = (data['unité_nasses_hauteur'] ?? '').toString();
+    _nassesOuvertureCtrl.text = (data['unité_nasses_ouverture'] ?? '').toString();
+    _nassesMailleCtrl.text = (data['unité_nasses_maille'] ?? '').toString();
+    _nassesNbreCtrl.text = (data['unité_nasses_nbre'] ?? '').toString();
+
+    _chalutLongRalingueCtrl.text = (data['unité_chalut_longueur_ralingue'] ?? '').toString();
+    _chalutOuvVertCtrl.text = (data['unité_chalut_ouverture_verticale'] ?? '').toString();
+    _chalutOuvHorizCtrl.text = (data['unité_chalut_ouverture_horizontale'] ?? '').toString();
+    _chalutMailleCulCtrl.text = (data['unité_chalut_maille_cul'] ?? '').toString();
+    _chalutTypeCtrl.text = (data['unité_chalut_type'] ?? '').toString();
 
     _waveController = AnimationController(
       vsync: this,
@@ -328,225 +201,157 @@ class _UniteDePechePageState extends State<UniteDePechePage>
 
   @override
   void dispose() {
-    /*_CodePecheurCtrl.dispose();
-    _AgeCtrl.dispose();
-    _GenreCtrl.dispose();
-    _ExperienceCtrl.dispose();
-    _EtatCtrl.dispose();
-    _RoleCtrl.dispose();
-    _NiveauCtrl.dispose();
-    _Cnsstrl.dispose();
-    _PecheActCtrl.dispose();
-    _ZoneCtrl.dispose();*/
-    for (final ctrl in _dynamicCtrls.values) {
+    _matriculeCtrl.dispose();
+    _longueurBarqueCtrl.dispose();
+    _puissanceCtrl.dispose();
+    _typeCoqueCtrl.dispose();
+    _anneeAchatCtrl.dispose();
+    _dureeMareeCtrl.dispose();
+    for (var ctrl in _sortiesControllers.values) {
       ctrl.dispose();
     }
+    _filetsDroitsLongCtrl.dispose();
+    _filetsDroitsHautCtrl.dispose();
+    _filetsDroitsMailleCentCtrl.dispose();
+    _filetsDroitsMailleExtCtrl.dispose();
+    _filetsDroitsNbPiecesCtrl.dispose();
+    _filetsDroitsNbArmementsCtrl.dispose();
+    _filetsTournantsLongCtrl.dispose();
+    _filetsTournantsHautCtrl.dispose();
+    _filetsTournantsMailleAileCtrl.dispose();
+    _filetsTournantsMaillePocheCtrl.dispose();
+    _piegesDiametreCtrl.dispose();
+    _piegesNbreCtrl.dispose();
+    _nassesDiametreCtrl.dispose();
+    _nassesHauteurCtrl.dispose();
+    _nassesOuvertureCtrl.dispose();
+    _nassesMailleCtrl.dispose();
+    _nassesNbreCtrl.dispose();
+    _chalutLongRalingueCtrl.dispose();
+    _chalutOuvVertCtrl.dispose();
+    _chalutOuvHorizCtrl.dispose();
+    _chalutMailleCulCtrl.dispose();
+    _chalutTypeCtrl.dispose();
     _waveController.dispose();
     super.dispose();
   }
-/* 
-  _EnginOption? _findEnginOption(String label, String code) {
-    for (final option in _enginOptions) {
-      if (label.isNotEmpty && option.label == label) return option;
-      if (code.isNotEmpty && option.code == code) return option;
-    }
-    return null;
-  }*/
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
+  void _calculerMoyenneSorties() {
+    int totalJours = 0;
+    int moisRenseignes = 0;
+
+    _sortiesControllers.forEach((mois, ctrl) {
+      final valeur = int.tryParse(ctrl.text);
+      if (valeur != null) {
+        totalJours += valeur;
+        moisRenseignes++;
+      }
+    });
+
+    setState(() {
+      _moyenneSorties = moisRenseignes > 0 ? totalJours / moisRenseignes : 0.0;
+      data['moyenne_sorties_2025'] = _moyenneSorties;
+    });
   }
 
-  InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
-    labelText: label,
-    hintText: 'Saisir ici...',
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    suffixIcon: suffixIcon,
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
-/*
-  Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
-    final picked = await showTimePicker(
+  void _sauvegarderSorties() {
+    final Map<String, int> sortiesMap = {};
+    _sortiesControllers.forEach((mois, ctrl) {
+      sortiesMap[mois] = int.tryParse(ctrl.text) ?? 0;
+    });
+    data['sorties_2025'] = sortiesMap;
+    _service.scheduleFullDataSave(widget.formId, data);
+  }
+
+  void _sauvegarderTableau() {
+    data['engins_peche'] = _listeEngins.map((engin) => engin.toMap()).toList();
+    _service.scheduleFullDataSave(widget.formId, data);
+  }
+
+  Future<void> _pickAnneeAchat() async {
+    final picked = await showDatePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1960),
+      lastDate: DateTime(2100),
+      initialDatePickerMode: DatePickerMode.year,
     );
     if (picked != null) {
-      final hh = picked.hour.toString().padLeft(2, '0');
-      final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = '$hh:$mm';
-      setState(() => ctrl.text = txt);
-      data[key] = txt;
+      setState(() => _anneeAchatCtrl.text = picked.year.toString());
+      data['barque_annee_achat'] = picked.year.toString();
       _service.scheduleFullDataSave(widget.formId, data);
     }
   }
 
-  void _onTypeEnginChanged(_EnginOption? option) {
-    setState(() => _selectedEnginOption = option);
-    if (option == null) {
-      data.remove('suivi_typeEngin');
-      data.remove('suivi_typeEnginCode');
-    } else {
-      data['suivi_typeEngin'] = option.label;
-      data['suivi_typeEnginCode'] = option.code;
-    }
-    _clearInactiveConditionalData();
-    if (option == null || option.code != 'AUTRE') {
-      _typeEnginAutreCtrl.clear();
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
-
-  void _clearInactiveConditionalData() {
-    final activeGroup = _selectedEnginOption?.group;
-    for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeGroup) continue;
-      for (final def in entry.value) {
-        data.remove(def.key);
-        _dynamicCtrls[def.key]?.clear();
-      }
-    }
-    for (final key in _legacyConditionalKeys) {
-      data.remove(key);
-    }
-  }*/
+  InputDecoration _dec(String label, {String? suffix}) => InputDecoration(
+    labelText: label,
+    suffixText: suffix,
+    hintText: 'Saisir...',
+    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+    filled: true,
+    fillColor: const Color(0xFFF8FBFF),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2)),
+  );
 
   Widget _field({
     required TextEditingController controller,
     required String label,
     required String key,
     bool numeric = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffixIcon,
+    String? suffix,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
-      keyboardType: numeric
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
-      decoration: _dec(label, suffixIcon: suffixIcon),
+      keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      decoration: _dec(label, suffix: suffix),
       onChanged: (v) {
         data[key] = v;
         _service.scheduleFullDataSave(widget.formId, data);
       },
     );
   }
-/*
-  Widget _buildConditionalSection() {
-    final group = _selectedEnginOption?.group;
-    if (group == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[group];
-    if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Détails type d'engin",
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold, fontSize: 16),
           ),
-        ),
-        const SizedBox(height: 12),
-        ...List.generate(defs.length, (index) {
-          final def = defs[index];
-          final widget = _field(
-            controller: _dynamicCtrls[def.key]!,
-            label: def.label,
-            key: def.key,
-            numeric: def.numeric,
-          );
-          if (index == defs.length - 1) return widget;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: widget,
-          );
-        }),
-      ],
-    );
-  }
-*/
-  void _goNext() {/*
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }*/
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UniteDePechePage(formId: widget.formId, data: data),
+          const Divider(color: Color(0xFF00D9D9), thickness: 1.5, endIndent: 200),
+        ],
       ),
     );
   }
 
-  void _goToLekHome() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
-      (route) => route.isFirst,
+  Widget _subSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      child: Text(
+        title,
+        style: const TextStyle(color: Color(0xFF2D4BA8), fontWeight: FontWeight.w700, fontSize: 14),
+      ),
+    );
+  }
+
+  void _goNext() {
+    _sauvegarderTableau();
+    _sauvegarderSorties();
+    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Données enregistrées avec succès !')),
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DynamiqueDuCrabePage(formId: widget.formId, data: data),
+      ),
     );
   }
 
@@ -556,18 +361,10 @@ class _UniteDePechePageState extends State<UniteDePechePage>
       body: Stack(
         children: [
           SizedBox(
-            height: 220,
+            height: 200,
             child: Container(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF2D4BA8),
-                    Color(0xFF1E3A8A),
-                  ],
-                ),
+                gradient: LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8)]),
               ),
               child: AnimatedBuilder(
                 animation: _waveController,
@@ -576,7 +373,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                     painter: WavePainter(
                       animation: _waveController.value,
                       color: const Color(0xFF00D9D9).withValues(alpha: 0.12),
-                      waveHeight: 18,
+                      waveHeight: 15,
                     ),
                     size: Size.infinite,
                   );
@@ -588,209 +385,331 @@ class _UniteDePechePageState extends State<UniteDePechePage>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: _goToLekHome,
+                        onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
-                      const SizedBox(width: 4),
                       const Text(
-                        'Suivi',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        "Unité de Pêche",
+                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
                       ),
                       const Spacer(),
-                      Text(
-                        'Étape 2/5',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      const Text('Étape 3/9', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     children: [
-                      _sectionCard(
-                        children: [/*
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTypeObservation,
-                            isExpanded: true,
-                            decoration: _dec("Type d'observation"),
-                            hint: const Text('Choisir...'),
-                            items: _typeObservationOptions
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(
-                                      item,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedTypeObservation = value);
-                              if (value == null) {
-                                data.remove('suivi_typeObservation');
-                              } else {
-                                data['suivi_typeObservation'] = value;
-                              }
-                              _service.scheduleFullDataSave(
-                                widget.formId,
-                                data,
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<_EnginOption>(
-                            initialValue: _selectedEnginOption,
-                            isExpanded: true,
-                            decoration: _dec("Type d'engin"),
-                            hint: const Text('Choisir...'),
-                            items: _enginOptions
-                                .map(
-                                  (option) => DropdownMenuItem<_EnginOption>(
-                                    value: option,
-                                    child: Text(
-                                      option.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: _onTypeEnginChanged,
-                          ),
-                          if (_selectedEnginOption?.code == 'AUTRE') ...[
-                            const SizedBox(height: 12),
-                            _field(
-                              controller: _typeEnginAutreCtrl,
-                              label: 'Préciser',
-                              key: 'suivi_typeEnginAutre',
-                            ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
                           ],
-                          if (_selectedEnginOption != null) ...[
-                            const SizedBox(height: 12),
-                            _buildConditionalSection(),
-                          ],*//*
-                          _field(
-                            controller: _CodePecheurCtrl,
-                            label: 'Nom ou code du pêcheur (facultatif)',
-                            key: 'Nom ou code du pêcheur (facultatif)',
-                            numeric: true,
-                          ),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              
+                              // ================= a) BARQUE =================
+                              _sectionTitle("a) Barque"),
+                              _field(controller: _matriculeCtrl, label: 'Matricule', key: 'barque_matricule'),
+                              const SizedBox(height: 10),
+                              _field(controller: _longueurBarqueCtrl, label: 'Longueur', key: 'barque_longueur', numeric: true, suffix: 'm'),
+                              const SizedBox(height: 10),
+                              _field(controller: _puissanceCtrl, label: 'Puissance', key: 'barque_puissance', numeric: true, suffix: 'chx'),
+                              const SizedBox(height: 10),
+                              _field(controller: _typeCoqueCtrl, label: 'Type de coque barque', key: 'barque_type_coque'),
+                              const SizedBox(height: 10),
+                              TextFormField(
+                                controller: _anneeAchatCtrl,
+                                readOnly: true,
+                                onTap: _pickAnneeAchat,
+                                decoration: _dec("Année d'achat (coque)").copyWith(
+                                  suffixIcon: const Icon(Icons.calendar_today, size: 18, color: Color(0xFF1E3A8A)),
+                                ),
+                              ),
 
-                          const SizedBox(height: 12),
+                              // ================= b) ACTIVITÉ =================
+                              _sectionTitle("b) Activité"),
+                              const SizedBox(height: 5),
+                              SizedBox(
+                                height: 380,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.vertical,
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: DataTable(
+                                      border: TableBorder.all(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(8)),
+                                      headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
+                                      columns: const [
+                                        DataColumn(label: Text('Code engin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text('Nom local', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text('Part %', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text('Espèce cibles', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text('Espèce access.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text("Saison d'utilisation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                        DataColumn(label: Text('Nb h pêche eff.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                                      ],
+                                      rows: _listeEngins.map((engin) {
+                                        return DataRow(cells: [
+                                          DataCell(SizedBox(width: 150, child: Text(engin.codeEngin, style: const TextStyle(fontSize: 11)))),
+                                          DataCell(SizedBox(
+                                            width: 90,
+                                            child: TextFormField(
+                                              initialValue: engin.nomLocal,
+                                              style: const TextStyle(fontSize: 12),
+                                              decoration: const InputDecoration(border: InputBorder.none, hintText: '-'),
+                                              onChanged: (val) { engin.nomLocal = val; _sauvegarderTableau(); },
+                                            ),
+                                          )),
+                                          DataCell(SizedBox(
+                                            width: 50,
+                                            child: TextFormField(
+                                              initialValue: engin.partEnPourcent?.toString() ?? '',
+                                              keyboardType: TextInputType.number,
+                                              style: const TextStyle(fontSize: 12),
+                                              decoration: const InputDecoration(border: InputBorder.none, hintText: '-'),
+                                              onChanged: (val) { engin.partEnPourcent = double.tryParse(val); _sauvegarderTableau(); },
+                                            ),
+                                          )),
+                                          DataCell(SizedBox(
+                                            width: 100,
+                                            child: TextFormField(
+                                              initialValue: engin.especeCibles,
+                                              style: const TextStyle(fontSize: 12),
+                                              decoration: const InputDecoration(border: InputBorder.none, hintText: '-'),
+                                              onChanged: (val) { engin.especeCibles = val; _sauvegarderTableau(); },
+                                            ),
+                                          )),
+                                          DataCell(SizedBox(
+                                            width: 100,
+                                            child: TextFormField(
+                                              initialValue: engin.especeAccessoires,
+                                              style: const TextStyle(fontSize: 12),
+                                              decoration: const InputDecoration(border: InputBorder.none, hintText: '-'),
+                                              onChanged: (val) { engin.especeAccessoires = val; _sauvegarderTableau(); },
+                                            ),
+                                          )),
+                                          DataCell(
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: List.generate(12, (index) {
+                                                bool isSelected = engin.saisonUtilisation[index];
+                                                return GestureDetector(
+                                                  onTap: () {
+                                                    setState(() { engin.saisonUtilisation[index] = !isSelected; });
+                                                    _sauvegarderTableau();
+                                                  },
+                                                  child: Container(
+                                                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                                                    padding: const EdgeInsets.all(3),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? const Color(0xFF00D9D9) : Colors.transparent,
+                                                      borderRadius: BorderRadius.circular(3),
+                                                      border: Border.all(color: isSelected ? const Color(0xFF00D9D9) : Colors.grey.shade400),
+                                                    ),
+                                                    child: Text(
+                                                      _moisLettres[index],
+                                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black87),
+                                                    ),
+                                                  ),
+                                                );
+                                              }),
+                                            ),
+                                          ),
+                                          DataCell(SizedBox(
+                                            width: 65,
+                                            child: TextFormField(
+                                              initialValue: engin.nbHeurePecheEffective?.toString() ?? '',
+                                              keyboardType: TextInputType.number,
+                                              style: const TextStyle(fontSize: 12),
+                                              decoration: const InputDecoration(border: InputBorder.none, hintText: '-'),
+                                              onChanged: (val) { engin.nbHeurePecheEffective = int.tryParse(val); _sauvegarderTableau(); },
+                                            ),
+                                          )),
+                                        ]);
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 15),
+                              _field(controller: _dureeMareeCtrl, label: "Durée moyenne d'une Marée", key: 'activite_duree_maree', numeric: true, suffix: "en nbre d'heures"),
+                              
+                              // ================= SORTIES EN MER EN 2025 =================
+                              const SizedBox(height: 15),
+                              _subSectionTitle("Nombre de sorties en mer en 2025"),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.grey.shade50,
+                                ),
+                                child: Column(
+                                  children: [
+                                    GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 3,
+                                        crossAxisSpacing: 8,
+                                        mainAxisSpacing: 8,
+                                        childAspectRatio: 2.2,
+                                      ),
+                                      itemCount: _sortiesControllers.length,
+                                      itemBuilder: (context, index) {
+                                        String mois = _sortiesControllers.keys.elementAt(index);
+                                        return TextFormField(
+                                          controller: _sortiesControllers[mois],
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(fontSize: 13),
+                                          decoration: _dec(mois),
+                                          onChanged: (v) {
+                                            _calculerMoyenneSorties();
+                                            _sauvegarderSorties();
+                                          },
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.amber.shade300),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text(
+                                            "Moy nb jours (Moyenne):",
+                                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                                          ),
+                                          Text(
+                                            "${_moyenneSorties.toStringAsFixed(2)} jours",
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.deepOrange),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
 
-                          _field(
-                            controller: _AgeCtrl,
-                            label: 'Age',
-                            key: 'Age',
-                            numeric: true,
-                          ),
+                              // ================= c) CARACTÉRISTIQUES DES ENGINS =================
+                              _sectionTitle("c) Caractéristique de l'engin"),
+                              
+                              _subSectionTitle("c-1) Filets"),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("c-1.1 Filets droits (maillant, trémails, ...)", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black12)),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsLongCtrl, label: 'Longueur', key: 'fd_longueur', numeric: true, suffix: 'm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsHautCtrl, label: 'Hauteur', key: 'fd_hauteur', numeric: true, suffix: 'm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsMailleCentCtrl, label: 'Maille/Maille centrale', key: 'fd_maille_centrale', numeric: true, suffix: 'mm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsMailleExtCtrl, label: 'Maille extérieure', key: 'fd_maille_exterieure', numeric: true, suffix: 'mm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsNbPiecesCtrl, label: 'Nbre de pièces par armement', key: 'fd_nb_pieces', numeric: true),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsDroitsNbArmementsCtrl, label: 'Nbre armements', key: 'fd_nb_armements', numeric: true),
+                                    
+                                    const SizedBox(height: 14),
+                                    const Text("c-1.2 Filets Tournants", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black12)),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsTournantsLongCtrl, label: 'Longueur', key: 'ft_longueur', numeric: true, suffix: 'm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsTournantsHautCtrl, label: 'Hauteur (chute)', key: 'ft_hauteur', numeric: true, suffix: 'm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsTournantsMailleAileCtrl, label: 'Maille aile', key: 'ft_maille_aile', numeric: true, suffix: 'mm'),
+                                    const SizedBox(height: 6),
+                                    _field(controller: _filetsTournantsMaillePocheCtrl, label: 'Maille poche', key: 'ft_maille_poche', numeric: true, suffix: 'mm'),
+                                  ],
+                                ),
+                              ),
 
-                          const SizedBox(height: 12),
+                              _subSectionTitle("c-2) Pièges (gargoulette, pierre...)"),
+                              _field(controller: _piegesDiametreCtrl, label: 'Diamètre', key: 'pieges_diametre', numeric: true, suffix: 'cm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _piegesNbreCtrl, label: 'Nbre', key: 'pieges_nbre', numeric: true),
 
-                          _field(
-                            controller: _GenreCtrl,
-                            label: 'genre',
-                            key: 'genre',
-                            numeric: true,
-                          ),
+                              _subSectionTitle("c-3) Nasses"),
+                              _field(controller: _nassesDiametreCtrl, label: 'Diamètre', key: 'nasses_diametre', numeric: true, suffix: 'cm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _nassesHauteurCtrl, label: 'Hauteur', key: 'nasses_hauteur', numeric: true, suffix: 'cm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _nassesOuvertureCtrl, label: 'Ouverture', key: 'nasses_ouverture', numeric: true, suffix: 'cm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _nassesMailleCtrl, label: 'Maille', key: 'nasses_maille', numeric: true, suffix: 'mm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _nassesNbreCtrl, label: 'Nbre', key: 'nasses_nbre', numeric: true),
 
-                          const SizedBox(height: 12),
+                              _subSectionTitle("c-4) Chalut"),
+                              _field(controller: _chalutLongRalingueCtrl, label: 'Longueur ralingue inférieure', key: 'chalut_longueur_ralingue', numeric: true, suffix: 'm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _chalutOuvVertCtrl, label: 'Ouverture Verticale', key: 'chalut_ouverture_verticale', numeric: true, suffix: 'm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _chalutOuvHorizCtrl, label: 'Ouverture horizontale', key: 'chalut_ouverture_horizontale', numeric: true, suffix: 'm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _chalutMailleCulCtrl, label: 'Maille de cul de chalut', key: 'chalut_maille_cul', numeric: true, suffix: 'mm'),
+                              const SizedBox(height: 6),
+                              _field(controller: _chalutTypeCtrl, label: 'Type de chalut', key: 'chalut_type'),
 
-                          _field(
-                            controller: _ExperienceCtrl,
-                            label: 'Experience (Depuis quand)',
-                            key: 'Experience (Depuis quand)',
-                            numeric: true,
-                          ),
+                              const SizedBox(height: 30),
 
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _EtatCtrl,
-                            label: 'Propriétaire/Locataire',
-                            key: 'Propriétaire/Locataire',
-                            numeric: true,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _RoleCtrl,
-                            label: 'Role (Capitaine/Marin)',
-                            key: 'Role (Capitaine/Marin)',
-                            numeric: true,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _NiveauCtrl,
-                            label: 'Niveau éducation',
-                            key: 'Niveau éducation',
-                            numeric: true,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _Cnsstrl,
-                            label: 'Affiliation CNSS',
-                            key: 'Affiliation CNSS',
-                            numeric: true,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _PecheActCtrl,
-                            label: 'Pêche activité principale',
-                            key: 'Pêche activité principale',
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _field(
-                            controller: _ZoneCtrl,
-                            label: 'Zone de pêche',
-                            key: 'Zone de pêche',
-                            numeric: true,
-                          ),*/
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _OutlineButton(
-                              text: 'Précédent',
-                              icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _PrimaryGradientButton(
+                              // Boutons
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _OutlineButton(
+                                    text: 'Précédent',
+                                    icon: Icons.arrow_back,
+                                    onPressed: () {
+                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                    Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => InfoPage(formId: widget.formId, data:data),
+                                      ),
+                                   );}
+                                   ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)]),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: _PrimaryGradientButton(
                               text: 'Suivant',
                               icon: Icons.arrow_forward,
-                              onPressed: _goNext,
-                            ),
+                              onPressed: _goNext)))
+                                    
+                                  
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -802,50 +721,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
       ),
     );
   }
-
-  Widget _sectionCard({required List<Widget> children}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(children: children),
-    );
-  }
 }
-
-class _EnginOption {
-  final String label;
-  final String code;
-  final String group;
-
-  const _EnginOption({
-    required this.label,
-    required this.code,
-    required this.group,
-  });
-}
-
-class _ConditionalFieldDef {
-  final String key;
-  final String label;
-  final bool numeric;
-
-  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
-}
-
 class _PrimaryGradientButton extends StatelessWidget {
   final String text;
   final IconData icon;
@@ -901,7 +777,6 @@ class _PrimaryGradientButton extends StatelessWidget {
     );
   }
 }
-
 class _OutlineButton extends StatelessWidget {
   final String text;
   final IconData icon;

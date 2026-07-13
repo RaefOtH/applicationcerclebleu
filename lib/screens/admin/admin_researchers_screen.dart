@@ -8,6 +8,7 @@ import '../../services/csv_export_service.dart';
 import 'researcher_details_screen.dart';
 import 'widgets/admin_role_guard.dart';
 import '../../services/firestore_db.dart';
+import 'dart:async';
 
 class AdminResearchersScreen extends StatefulWidget {
   const AdminResearchersScreen({super.key});
@@ -30,15 +31,18 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isExporting = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_applyFilters);
     _load();
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     _placeController.dispose();
     _attachmentService.dispose();
@@ -515,8 +519,14 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                       const SizedBox(height: 8),
                                       TextField(
                                         controller: _searchController,
-                                        onChanged: (_) =>
-                                            setState(_applyFilters),
+                                        onChanged: (value) {
+                                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                          _debounce = Timer(const Duration(milliseconds: 1000), () {
+                                            setState( () {
+                                              _applyFilters();
+                                            });
+                                          });
+                                        },
                                         decoration: const InputDecoration(
                                           labelText:
                                               'Recherche par nom ou email',
@@ -528,8 +538,14 @@ class _AdminResearchersScreenState extends State<AdminResearchersScreen> {
                                       const SizedBox(height: 8),
                                       TextField(
                                         controller: _placeController,
-                                        onChanged: (_) =>
-                                            setState(_applyFilters),
+                                        onChanged: (value) {
+                                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                          _debounce = Timer(const Duration(milliseconds: 1000), () {
+                                            setState( () {
+                                              _applyFilters();
+                                            });
+                                          });
+                                        },
                                         decoration: const InputDecoration(
                                           labelText: 'Filtre emplacement',
                                           prefixIcon: Icon(

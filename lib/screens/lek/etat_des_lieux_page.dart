@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
-import 'niveau_de_confiance_page.dart';
+import '../../services/lek_form_service.dart';
 import 'lek_home.dart';
+// TODO: replace with the actual previous/next pages of your flow if different.
+import 'adaptation_locale_page.dart';
+import 'niveau_de_confiance_page.dart';
 
+/// Simple code/label pair used by the dropdowns of this page.
+class _OptionItem {
+  final String code;
+  final String label;
+  const _OptionItem(this.code, this.label);
+}
 
 class EtatDesLieuxPage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const EtatDesLieuxPage({super.key, required this.data, required this.formId});
+  const EtatDesLieuxPage({
+    super.key,
+    required this.data,
+    required this.formId,
+  });
 
   @override
   State<EtatDesLieuxPage> createState() => _EtatDesLieuxPageState();
@@ -17,256 +29,108 @@ class EtatDesLieuxPage extends StatefulWidget {
 
 class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _typeObservationOptions = [
-    'À bord',
-    'Au port',
-    'Expérimental',
+  static const List<_OptionItem> _ouiNonOptions = [
+    _OptionItem('Oui', 'Oui'),
+    _OptionItem('Non', 'Non'),
   ];
 
-  static const List<_EnginOption> _enginOptions = [
-    _EnginOption(
-      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
-      code: 'CHALUTS',
-      group: 'chalut',
-    ),
-    _EnginOption(
-      label: 'Senne tournante coulissante : PS',
-      code: 'PS',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets tournants : SUX',
-      code: 'SUX',
-      group: 'minimal',
-    ),
-    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
-    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
-    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
-    _EnginOption(
-      label: 'Trémails et maillants combinés : GTN',
-      code: 'GTN',
-      group: 'comb',
-    ),
-    _EnginOption(
-      label: 'Filets maillants dérivants : GND',
-      code: 'GND',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets maillants encerclants : GNC',
-      code: 'GNC',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
-      code: 'GTR',
-      group: 'tr',
-    ),
-    _EnginOption(
-      label: 'Filets monofilament : MoFi',
-      code: 'MoFi',
-      group: 'mofi',
-    ),
-    _EnginOption(
-      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
-      code: 'FIX',
-      group: 'fix',
-    ),
-    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
+  static const List<_OptionItem> _perceptionOptions = [
+    _OptionItem('Nuisance', 'Nuisance'),
+    _OptionItem('Ressource', 'Ressource'),
+    _OptionItem('LesDeux', 'Les deux'),
   ];
 
-  static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
-    'chalut': const [
-      _ConditionalFieldDef('suivi_chalut_type', 'Type de chalut'),
-      _ConditionalFieldDef(
-        'suivi_chalut_longueurRalingueInf',
-        'Longueur ralingue inférieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureVerticale',
-        'Ouverture verticale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureHorizontale',
-        'Ouverture horizontale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_mailleCul',
-        'Maille de cul de chalut',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
-    ],
-    'mofi': const [
-      _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
-    ],
-    'comb': const [
-      _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
-    ],
-    'tr': const [
-      _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
-    ],
-    'fenc': const [
-      _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_fenc_hauteurChute',
-        'Hauteur (chute)',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_mailleAile',
-        'Maille aile',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_maillePoche',
-        'Maille poche',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_typeFiletTournant',
-        'Type de filet tournant',
-      ),
-      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
-    ],
-    'fix': const [
-      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
-      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
-    ],
-    'minimal': const [
-      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
-    ],
-  };
+  static const List<_OptionItem> _etatGestionOptions = [
+    _OptionItem('Bonne', 'Bonne'),
+    _OptionItem('±', '±'),
+    _OptionItem('Inexistante', 'Inexistante'),
+  ];
 
-  static final Set<String> _legacyConditionalKeys = {
-    'suivi_nc_diametre',
-    'suivi_nc_hauteur',
-    'suivi_nc_ouverture',
-    'suivi_nc_maille',
-    'suivi_nc_nbre',
-    'suivi_nc_typeNasses',
-    'suivi_p_diametre',
-    'suivi_p_nbre',
-    'suivi_p_typePieges',
-  };
+  static const List<_OptionItem> _interetOptions = [
+    _OptionItem('Oui', 'Oui'),
+    _OptionItem('Non', 'Non'),
+    _OptionItem('Indifferent', 'Indifférent'),
+  ];
+
+  static const List<_OptionItem> _etatMilieuOptions = [
+    _OptionItem('Bon', 'Bon'),
+    _OptionItem('±', '±'),
+    _OptionItem('Mauvais', 'Mauvais'),
+  ];
 
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
-
-  final _typeEnginAutreCtrl = TextEditingController();
-  final _nbPiecesCtrl = TextEditingController();
-  final _idNavireCtrl = TextEditingController();
-  final _idNasseCtrl = TextEditingController();
-  final _debutCtrl = TextEditingController();
-  final _finCtrl = TextEditingController();
-  final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedTypeObservation;
-  _EnginOption? _selectedEnginOption;
-
+  final LekFormService _service = LekFormService();
   late AnimationController _waveController;
+
+  String? _perceptionCrabe;
+  String? _etatGestionCrabe;
+  String? _interetImplicationGestion;
+
+  String? _affiliationOuiNon;
+  final TextEditingController _affiliationTypeCtrl = TextEditingController();
+
+  String? _reglementationAdequate;
+
+  final TextEditingController _mesuresGestionProposeesCtrl =
+      TextEditingController();
+
+  String? _bloomsOuiNon;
+  final TextEditingController _bloomsAnneeCtrl = TextEditingController();
+
+  String? _pollutionsOuiNon;
+  final TextEditingController _pollutionsTypeCtrl = TextEditingController();
+
+  String? _etatMilieuEaux;
+  String? _etatFond;
+
+  String? _problemesCommercialisationOuiNon;
+  final TextEditingController _problemesCommercialisationPreciserCtrl =
+      TextEditingController();
+
+  final TextEditingController _principalProblemeCtrl = TextEditingController();
+  final TextEditingController _suggestionAmeliorationCtrl =
+      TextEditingController();
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    _selectedTypeObservation = _safeOption(
-      data['suivi_typeObservation'],
-      _typeObservationOptions,
-    );
-    _typeEnginAutreCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _nbPiecesCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _idNavireCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _idNasseCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _debutCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _finCtrl.text = (data['suivi_fin'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
-    _selectedEnginOption = _findEnginOption(savedLabel, savedCode);
+    _perceptionCrabe = _nullIfEmpty(data['etatlieux_perceptionCrabe']);
+    _etatGestionCrabe = _nullIfEmpty(data['etatlieux_etatGestionCrabe']);
+    _interetImplicationGestion =
+        _nullIfEmpty(data['etatlieux_interetImplicationGestion']);
 
-    for (final defs in _conditionalFields.values) {
-      for (final def in defs) {
-        _dynamicCtrls.putIfAbsent(
-          def.key,
-          () => TextEditingController(text: (data[def.key] ?? '').toString()),
-        );
-      }
-    }
+    _affiliationOuiNon = _nullIfEmpty(data['etatlieux_affiliation_ouiNon']);
+    _affiliationTypeCtrl.text =
+        (data['etatlieux_affiliation_type'] ?? '').toString();
+
+    _reglementationAdequate =
+        _nullIfEmpty(data['etatlieux_reglementationAdequate']);
+
+    _mesuresGestionProposeesCtrl.text =
+        (data['etatlieux_mesuresGestionProposees'] ?? '').toString();
+
+    _bloomsOuiNon = _nullIfEmpty(data['etatlieux_blooms_ouiNon']);
+    _bloomsAnneeCtrl.text = (data['etatlieux_blooms_annee'] ?? '').toString();
+
+    _pollutionsOuiNon = _nullIfEmpty(data['etatlieux_pollutions_ouiNon']);
+    _pollutionsTypeCtrl.text =
+        (data['etatlieux_pollutions_type'] ?? '').toString();
+
+    _etatMilieuEaux = _nullIfEmpty(data['etatlieux_etatMilieuEaux']);
+    _etatFond = _nullIfEmpty(data['etatlieux_etatFond']);
+
+    _problemesCommercialisationOuiNon =
+        _nullIfEmpty(data['etatlieux_problemesCommercialisation_ouiNon']);
+    _problemesCommercialisationPreciserCtrl.text =
+        (data['etatlieux_problemesCommercialisation_preciser'] ?? '')
+            .toString();
+
+    _principalProblemeCtrl.text =
+        (data['etatlieux_principalProbleme'] ?? '').toString();
+    _suggestionAmeliorationCtrl.text =
+        (data['etatlieux_suggestionAmelioration'] ?? '').toString();
 
     _waveController = AnimationController(
       vsync: this,
@@ -274,38 +138,35 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
     )..repeat();
   }
 
+  static String? _nullIfEmpty(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   @override
   void dispose() {
-    _typeEnginAutreCtrl.dispose();
-    _nbPiecesCtrl.dispose();
-    _idNavireCtrl.dispose();
-    _idNasseCtrl.dispose();
-    _debutCtrl.dispose();
-    _finCtrl.dispose();
-    for (final ctrl in _dynamicCtrls.values) {
-      ctrl.dispose();
-    }
+    _affiliationTypeCtrl.dispose();
+    _mesuresGestionProposeesCtrl.dispose();
+    _bloomsAnneeCtrl.dispose();
+    _pollutionsTypeCtrl.dispose();
+    _problemesCommercialisationPreciserCtrl.dispose();
+    _principalProblemeCtrl.dispose();
+    _suggestionAmeliorationCtrl.dispose();
     _waveController.dispose();
     super.dispose();
   }
 
-  _EnginOption? _findEnginOption(String label, String code) {
-    for (final option in _enginOptions) {
-      if (label.isNotEmpty && option.label == label) return option;
-      if (code.isNotEmpty && option.code == code) return option;
-    }
-    return null;
+  void _save(String key, String value) {
+    data[key] = value;
+    _service.scheduleFullDataSave(widget.formId, data);
   }
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
-  }
-
-  InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
+  InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
     labelText: label,
     hintText: 'Saisir ici...',
+    helperText: helperText,
+    helperMaxLines: 2,
+    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     floatingLabelAlignment: FloatingLabelAlignment.start,
@@ -317,7 +178,6 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
       color: Color(0xFF1E3A8A),
       fontWeight: FontWeight.w700,
     ),
-    suffixIcon: suffixIcon,
     filled: true,
     fillColor: const Color(0xFFF8FBFF),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -335,156 +195,59 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
     ),
   );
 
-  Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-    );
-    if (picked != null) {
-      final hh = picked.hour.toString().padLeft(2, '0');
-      final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = '$hh:$mm';
-      setState(() => ctrl.text = txt);
-      data[key] = txt;
-      _service.scheduleFullDataSave(widget.formId, data);
-    }
-  }
-
-  void _onTypeEnginChanged(_EnginOption? option) {
-    setState(() => _selectedEnginOption = option);
-    if (option == null) {
-      data.remove('suivi_typeEngin');
-      data.remove('suivi_typeEnginCode');
-    } else {
-      data['suivi_typeEngin'] = option.label;
-      data['suivi_typeEnginCode'] = option.code;
-    }
-    _clearInactiveConditionalData();
-    if (option == null || option.code != 'AUTRE') {
-      _typeEnginAutreCtrl.clear();
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
-
-  void _clearInactiveConditionalData() {
-    final activeGroup = _selectedEnginOption?.group;
-    for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeGroup) continue;
-      for (final def in entry.value) {
-        data.remove(def.key);
-        _dynamicCtrls[def.key]?.clear();
-      }
-    }
-    for (final key in _legacyConditionalKeys) {
-      data.remove(key);
-    }
-  }
-
-  Widget _field({
+  Widget _textField({
     required TextEditingController controller,
     required String label,
-    required String key,
-    bool numeric = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffixIcon,
+    required String dataKey,
+    String? helperText,
+    bool multiline = false,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
-      keyboardType: numeric
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
-      decoration: _dec(label, suffixIcon: suffixIcon),
+      minLines: multiline ? 3 : 1,
+      maxLines: multiline ? 5 : 1,
+      decoration: _dec(label, helperText: helperText),
+      onChanged: (v) => _save(dataKey, v),
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required List<_OptionItem> options,
+    required String? value,
+    required String dataKey,
+    required ValueChanged<String?> onChanged,
+    String? helperText,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: _dec(label, helperText: helperText),
+      hint: const Text('Choisir...'),
+      items: options
+          .map(
+            (o) => DropdownMenuItem<String>(
+              value: o.code,
+              child: Text(o.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
       onChanged: (v) {
-        data[key] = v;
-        _service.scheduleFullDataSave(widget.formId, data);
+        onChanged(v);
+        _save(dataKey, v ?? '');
       },
     );
   }
 
-  Widget _buildConditionalSection() {
-    final group = _selectedEnginOption?.group;
-    if (group == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[group];
-    if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Détails type d'engin",
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...List.generate(defs.length, (index) {
-          final def = defs[index];
-          final widget = _field(
-            controller: _dynamicCtrls[def.key]!,
-            label: def.label,
-            key: def.key,
-            numeric: def.numeric,
-          );
-          if (index == defs.length - 1) return widget;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: widget,
-          );
-        }),
-      ],
-    );
-  }
+  Widget _gap() => const SizedBox(height: 12);
 
   void _goNext() {
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => NiveauDeConfiancePage(formId: widget.formId, data: data),
-      ),
-    );
+    _service.updateFormData(widget.formId, data, stepCompleted: 6);
+    // TODO: navigate to whatever step follows "état des lieux" in your
+    // flow, e.g.:
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => NiveauDeConfiancePage(formId: widget.formId, data: data),
+    ));
   }
 
   void _goToLekHome() {
@@ -541,7 +304,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                       ),
                       const SizedBox(width: 4),
                       const Text(
-                        'Suivi',
+                        'Etat des lieux',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -550,7 +313,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 2/5',
+                        'Étape 8/9',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
@@ -566,114 +329,161 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                     children: [
                       _sectionCard(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTypeObservation,
-                            isExpanded: true,
-                            decoration: _dec("Type d'observation"),
-                            hint: const Text('Choisir...'),
-                            items: _typeObservationOptions
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(
-                                      item,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedTypeObservation = value);
-                              if (value == null) {
-                                data.remove('suivi_typeObservation');
-                              } else {
-                                data['suivi_typeObservation'] = value;
-                              }
-                              _service.scheduleFullDataSave(
-                                widget.formId,
-                                data,
-                              );
-                            },
+                          _dropdownField(
+                            label: 'Perception de crabe',
+                            options: _perceptionOptions,
+                            value: _perceptionCrabe,
+                            dataKey: 'etatlieux_perceptionCrabe',
+                            onChanged: (v) =>
+                                setState(() => _perceptionCrabe = v),
+                            helperText: 'Nuisance / ressource / les deux',
                           ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<_EnginOption>(
-                            initialValue: _selectedEnginOption,
-                            isExpanded: true,
-                            decoration: _dec("Type d'engin"),
-                            hint: const Text('Choisir...'),
-                            items: _enginOptions
-                                .map(
-                                  (option) => DropdownMenuItem<_EnginOption>(
-                                    value: option,
-                                    child: Text(
-                                      option.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: _onTypeEnginChanged,
+                          _gap(),
+                          _dropdownField(
+                            label: 'Etat de la gestion du crabe',
+                            options: _etatGestionOptions,
+                            value: _etatGestionCrabe,
+                            dataKey: 'etatlieux_etatGestionCrabe',
+                            onChanged: (v) =>
+                                setState(() => _etatGestionCrabe = v),
+                            helperText: 'Bonne / ± / inexistante',
                           ),
-                          if (_selectedEnginOption?.code == 'AUTRE') ...[
-                            const SizedBox(height: 12),
-                            _field(
-                              controller: _typeEnginAutreCtrl,
+                          _gap(),
+                          _dropdownField(
+                            label:
+                                "Intérêt dans l'implication de la gestion de CB",
+                            options: _interetOptions,
+                            value: _interetImplicationGestion,
+                            dataKey: 'etatlieux_interetImplicationGestion',
+                            onChanged: (v) => setState(
+                                () => _interetImplicationGestion = v),
+                            helperText: 'oui / non / indifférent',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Affiliation GDAP SMSA ou association',
+                            options: _ouiNonOptions,
+                            value: _affiliationOuiNon,
+                            dataKey: 'etatlieux_affiliation_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _affiliationOuiNon = v),
+                            helperText: 'oui / non et type',
+                          ),
+                          if (_affiliationOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _affiliationTypeCtrl,
+                              label: 'Type',
+                              dataKey: 'etatlieux_affiliation_type',
+                            ),
+                          ],
+                          _gap(),
+                          _dropdownField(
+                            label: 'Réglementation adéquate',
+                            options: _ouiNonOptions,
+                            value: _reglementationAdequate,
+                            dataKey: 'etatlieux_reglementationAdequate',
+                            onChanged: (v) =>
+                                setState(() => _reglementationAdequate = v),
+                            helperText: 'oui / non',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _mesuresGestionProposeesCtrl,
+                            label: 'Mesures de gestion proposées',
+                            dataKey: 'etatlieux_mesuresGestionProposees',
+                            helperText: 'détail',
+                            multiline: true,
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Blooms, anomalies, mortalités',
+                            options: _ouiNonOptions,
+                            value: _bloomsOuiNon,
+                            dataKey: 'etatlieux_blooms_ouiNon',
+                            onChanged: (v) => setState(() => _bloomsOuiNon = v),
+                            helperText: 'oui / non et année',
+                          ),
+                          if (_bloomsOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _bloomsAnneeCtrl,
+                              label: 'Année',
+                              dataKey: 'etatlieux_blooms_annee',
+                            ),
+                          ],
+                          _gap(),
+                          _dropdownField(
+                            label: 'Pollutions',
+                            options: _ouiNonOptions,
+                            value: _pollutionsOuiNon,
+                            dataKey: 'etatlieux_pollutions_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _pollutionsOuiNon = v),
+                            helperText: 'oui / non et type',
+                          ),
+                          if (_pollutionsOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _pollutionsTypeCtrl,
+                              label: 'Type',
+                              dataKey: 'etatlieux_pollutions_type',
+                            ),
+                          ],
+                          _gap(),
+                          _dropdownField(
+                            label: 'Etat du milieu (eaux)',
+                            options: _etatMilieuOptions,
+                            value: _etatMilieuEaux,
+                            dataKey: 'etatlieux_etatMilieuEaux',
+                            onChanged: (v) =>
+                                setState(() => _etatMilieuEaux = v),
+                            helperText: 'Bon / ± / mauvais',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Etat du Fond',
+                            options: _etatMilieuOptions,
+                            value: _etatFond,
+                            dataKey: 'etatlieux_etatFond',
+                            onChanged: (v) => setState(() => _etatFond = v),
+                            helperText: 'Bon / ± / mauvais',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Problèmes concernant la commercialisation',
+                            options: _ouiNonOptions,
+                            value: _problemesCommercialisationOuiNon,
+                            dataKey:
+                                'etatlieux_problemesCommercialisation_ouiNon',
+                            onChanged: (v) => setState(
+                                () => _problemesCommercialisationOuiNon = v),
+                            helperText: 'oui / non - préciser',
+                          ),
+                          if (_problemesCommercialisationOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller:
+                                  _problemesCommercialisationPreciserCtrl,
                               label: 'Préciser',
-                              key: 'suivi_typeEnginAutre',
+                              dataKey:
+                                  'etatlieux_problemesCommercialisation_preciser',
                             ),
                           ],
-                          if (_selectedEnginOption != null) ...[
-                            const SizedBox(height: 12),
-                            _buildConditionalSection(),
-                          ],
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _nbPiecesCtrl,
-                            label: 'Nombre de pièces (nasse/filet)',
-                            key: 'suivi_nbPieces',
-                            numeric: true,
+                          _gap(),
+                          _textField(
+                            controller: _principalProblemeCtrl,
+                            label: 'Principal problème rencontré',
+                            dataKey: 'etatlieux_principalProbleme',
+                            helperText: 'nom',
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNavireCtrl,
-                            label: 'ID du navire (Nom & Immatriculation)',
-                            key: 'suivi_idNavire',
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNasseCtrl,
-                            label: 'ID de la nasse',
-                            key: 'suivi_idNasse',
-                            numeric: true,
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _debutCtrl,
-                            label: 'Opération de pêche - Début (24h)',
-                            key: 'suivi_debut',
-                            readOnly: true,
-                            onTap: () =>
-                                _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _finCtrl,
-                            label: 'Opération de pêche - Fin (24h)',
-                            key: 'suivi_fin',
-                            readOnly: true,
-                            onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_finCtrl, 'suivi_fin'),
-                            ),
+                          _gap(),
+                          _textField(
+                            controller: _suggestionAmeliorationCtrl,
+                            label: "Suggestion d'amélioration de l'activité",
+                            dataKey: 'etatlieux_suggestionAmelioration',
+                            helperText: 'détail',
+                            multiline: true,
                           ),
                         ],
                       ),
@@ -684,14 +494,21 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                    Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => AdaptationLocalePage(formId: widget.formId, data:data),
+                                      ),
+                                   );}
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _PrimaryGradientButton(
                               text: 'Suivant',
-                              icon: Icons.arrow_forward,
+                              icon: Icons.check,
                               onPressed: _goNext,
                             ),
                           ),
@@ -726,29 +543,9 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
-}
-
-class _EnginOption {
-  final String label;
-  final String code;
-  final String group;
-
-  const _EnginOption({
-    required this.label,
-    required this.code,
-    required this.group,
-  });
-}
-
-class _ConditionalFieldDef {
-  final String key;
-  final String label;
-  final bool numeric;
-
-  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
 }
 
 class _PrimaryGradientButton extends StatelessWidget {

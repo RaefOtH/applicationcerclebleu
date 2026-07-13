@@ -71,6 +71,15 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
     });
   }
 
+  void _openAiChat() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _AiChatSheet(),
+    );
+  }
+
   Future<void> _confirmLogout() async {
     final ok = await showModernLogoutDialog(context);
     if (ok != true) return;
@@ -345,6 +354,23 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(width: 8),
+                                        FilledButton.icon(
+                                          onPressed: _openAiChat,
+                                          icon: const Icon(
+                                            Icons.smart_toy_outlined,
+                                          ),
+                                          label: const Text('Ai chat'),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF00A6A6,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),
@@ -378,7 +404,8 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                                     const SizedBox(height: 14),
                                     if (stats == null ||
                                         (stats.totalTerrain == 0 &&
-                                            stats.totalLabo == 0))
+                                            stats.totalLabo == 0 &&
+                                        stats.totalLek == 0))
                                       _EmptyCard(
                                         text:
                                             'Aucune donnée trouvée pour les filtres sélectionnés.',
@@ -387,6 +414,7 @@ class _ChercheurDashboardState extends State<ChercheurDashboard>
                                       _SummaryCard(
                                         totalTerrain: stats.totalTerrain,
                                         totalLabo: stats.totalLabo,
+                                        totalLek: stats.totalLek,
                                       ),
                                       const SizedBox(height: 10),
                                       _StatsCard(
@@ -645,8 +673,10 @@ class _CreateButton extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final int totalTerrain;
   final int totalLabo;
+  final int totalLek;
 
-  const _SummaryCard({required this.totalTerrain, required this.totalLabo});
+
+  const _SummaryCard({required this.totalTerrain, required this.totalLabo, required this.totalLek});
 
   @override
   Widget build(BuildContext context) {
@@ -682,9 +712,17 @@ class _SummaryCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _SmallMetric(
-                  label: 'Laboratoire',
+                  label: 'Lab',
                   value: totalLabo.toString(),
                   icon: Icons.science_outlined,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SmallMetric(
+                  label: 'LEK',
+                  value: totalLek.toString(),
+                  icon: Icons.bar_chart,
                 ),
               ),
             ],
@@ -875,3 +913,342 @@ class _EmptyCard extends StatelessWidget {
     );
   }
 }
+
+// ============================================================
+// Assistant "Ai chat" — chatbot local, entièrement embarqué dans
+// l'application : aucun appel réseau, aucune clé API, aucun
+// service payant ni abonnement. Les réponses sont générées par
+// un moteur de règles/mots-clés limité aux données Terrain,
+// Laboratoire et au questionnaire LEK.
+// ============================================================
+
+enum _ChatSender { user, bot }
+
+class _ChatMessage {
+  final String text;
+  final _ChatSender sender;
+
+  const _ChatMessage(this.text, this.sender);
+}
+
+/// Génère une réponse locale (sans frais, sans abonnement, sans appel
+/// réseau) en se basant sur des mots-clés liés aux données Terrain,
+/// Laboratoire et au questionnaire LEK. Toute question hors de ce
+/// périmètre reçoit une réponse de recadrage.
+String _generateAiChatReply(String question) {
+  final q = question.toLowerCase().trim();
+
+  bool has(List<String> words) => words.any((w) => q.contains(w));
+
+  if (q.isEmpty) {
+    return "Posez-moi une question sur les données terrain, les données laboratoire ou le questionnaire LEK.";
+  }
+
+  if (has(['bonjour', 'salut', 'bonsoir', 'hello', 'coucou'])) {
+    return "Bonjour ! Je suis l'assistant Cercle Bleu. Je peux vous renseigner sur les données terrain, les données laboratoire et le questionnaire LEK. Que souhaitez-vous savoir ?";
+  }
+
+  if (has(['merci'])) {
+    return "Avec plaisir ! N'hésitez pas si vous avez d'autres questions sur les données terrain, laboratoire ou le questionnaire LEK.";
+  }
+
+  if (has(['terrain'])) {
+    return "Les données Terrain regroupent les enquêtes de capture réalisées sur le terrain : port de pêche, zone, espèce observée et abondance des crabes capturés (champ cap_abondance). Vous pouvez les filtrer par période et par port/zone via le bouton 'Filtres', et les saisir via le bouton 'Enquête : Données Terrain'.";
+  }
+
+  if (has(['labo', 'laboratoire'])) {
+    return "Les données Laboratoire correspondent aux analyses réalisées en laboratoire sur les échantillons collectés sur le terrain. Vous pouvez filtrer les statistiques par laboratoire, et saisir de nouvelles données via le bouton 'Données Laboratoire'.";
+  }
+
+  if (has(['lek', 'questionnaire'])) {
+    return "Le questionnaire LEK (Local Ecological Knowledge, connaissance écologique locale) recueille le savoir et les observations des pêcheurs et acteurs locaux sur l'espèce étudiée. Ces réponses complètent les données terrain et laboratoire. Vous pouvez en créer un via le bouton 'Questionnaire LEK'.";
+  }
+
+  if (has(['crabe', 'crabes', 'espèce', 'especes', 'espece'])) {
+    return "Le total de crabes capturés correspond à la somme du champ cap_abondance des enquêtes terrain. Le 'Top 5 Espèces' indique les espèces les plus fréquemment recensées, selon les filtres actifs.";
+  }
+
+  if (has(['port', 'ports', 'zone'])) {
+    return "Les 'ports uniques' correspondent aux ports de pêche distincts enregistrés dans les enquêtes terrain. Le 'Top 5 Ports' montre les ports les plus actifs selon les filtres sélectionnés.";
+  }
+
+  if (has(['filtre', 'filtres', 'période', 'periode', 'date'])) {
+    return "Le bouton 'Filtres' permet d'affiner les statistiques affichées par période (aujourd'hui, 7 jours, 30 jours, tout, ou une période personnalisée), par port/zone et par laboratoire.";
+  }
+
+  if (has(['résumé', 'resume', 'total', 'statistique', 'statistiques'])) {
+    return "Le 'Résumé global' affiche le nombre total d'enquêtes terrain, de données laboratoire et de réponses au questionnaire LEK, en fonction des filtres actifs.";
+  }
+
+  return "Je peux uniquement répondre aux questions concernant les données terrain, les données laboratoire et le questionnaire LEK de Cercle Bleu. Pouvez-vous reformuler votre question à ce sujet ?";
+}
+
+class _AiChatSheet extends StatefulWidget {
+  const _AiChatSheet();
+
+  @override
+  State<_AiChatSheet> createState() => _AiChatSheetState();
+}
+
+class _AiChatSheetState extends State<_AiChatSheet> {
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  final List<_ChatMessage> _messages = [
+    const _ChatMessage(
+      "Bonjour, je suis l'assistant Cercle Bleu 🦀\n"
+      "Je réponds uniquement aux questions sur les données terrain, "
+      "les données laboratoire et le questionnaire LEK.",
+      _ChatSender.bot,
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _messages.add(_ChatMessage(text, _ChatSender.user));
+      _messages.add(_ChatMessage(_generateAiChatReply(text), _ChatSender.bot));
+    });
+    _controller.clear();
+    _scrollToBottom();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.78,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollSheetController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1E3A8A),
+                      Color(0xFF2D4BA8),
+                      Color(0xFF1E3A8A),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.smart_toy_outlined,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Assistant Cercle Bleu',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            'Terrain · Laboratoire · Questionnaire LEK',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollSheetController,
+                  padding: const EdgeInsets.all(14),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final m = _messages[index];
+                    final isUser = m.sender == _ChatSender.user;
+                    return Align(
+                      alignment: isUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.78,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isUser
+                              ? const Color(0xFF1E3A8A)
+                              : Colors.white,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isUser ? 16 : 4),
+                            bottomRight: Radius.circular(isUser ? 4 : 16),
+                          ),
+                          border: isUser
+                              ? null
+                              : Border.all(
+                                  color: const Color(
+                                    0xFF1E3A8A,
+                                  ).withValues(alpha: 0.08),
+                                ),
+                        ),
+                        child: Text(
+                          m.text,
+                          style: TextStyle(
+                            color: isUser ? Colors.white : const Color(0xFF1E293B),
+                            fontSize: 14,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: const Color(0xFF1E3A8A).withValues(alpha: 0.12),
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _controller,
+                            minLines: 1,
+                            maxLines: 4,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _send(),
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Question sur le terrain, le labo, le LEK…',
+                              hintStyle: TextStyle(fontSize: 13),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00A6A6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: _send,
+                          icon: const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+/*
+Données Terrain
+
+« C'est quoi les données terrain ? »
+« Comment ajouter une enquête terrain ? »
+
+Données Laboratoire
+
+« Que contiennent les données laboratoire ? »
+« Comment saisir des données labo ? »
+
+Questionnaire LEK
+
+« C'est quoi le questionnaire LEK ? »
+« À quoi sert le LEK ? »
+
+Crabes / espèces
+
+« Comment est calculé le total de crabes capturés ? »
+« Que montre le Top 5 Espèces ? »
+
+Ports / zones
+
+« Qu'est-ce que "ports uniques" ? »
+« Comment est calculé le Top 5 Ports ? »
+
+Filtres
+
+« Comment filtrer par période ? »
+« À quoi sert le bouton Filtres ? »
+
+Résumé global
+
+« Que montre le résumé global ? »
+
+Salutations / remerciements
+
+« Bonjour », « Merci »*/

@@ -17,22 +17,23 @@ class NiveauDeConfiancePage extends StatefulWidget {
 class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
     with SingleTickerProviderStateMixin {
   late final Map<String, dynamic> data;
-  final _remarquesCtrl = TextEditingController();
+  String? _selectedValue;
   late AnimationController _waveController;
   final LekFormService _service = LekFormService();
 
-  bool _pecheurReticent = false;
-  bool _infoPartielle = false;
-  bool _gpsEstime = false;
+  // Liste des choix disponibles pour le niveau de confiance
+  final List<String> _confianceOptions = ['Faible', 'Moyen', 'Fort'];
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    _remarquesCtrl.text = (data['rem_text'] ?? '').toString();
-    _pecheurReticent = (data['rem_pecheurReticent'] ?? false) as bool;
-    _infoPartielle = (data['rem_infoPartielle'] ?? false) as bool;
-    _gpsEstime = (data['rem_gpsEstime'] ?? false) as bool;
+    
+    // Récupération de la valeur stockée
+    final String initialValue = (data['Niveau_de_confiance'] ?? '').toString().trim();
+    if (_confianceOptions.contains(initialValue)) {
+      _selectedValue = initialValue;
+    }
 
     _waveController = AnimationController(
       vsync: this,
@@ -42,7 +43,6 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
 
   @override
   void dispose() {
-    _remarquesCtrl.dispose();
     _waveController.dispose();
     super.dispose();
   }
@@ -50,11 +50,9 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
   InputDecoration _dec({
     required String label,
     String? hint,
-    bool alignLabelWithHint = false,
   }) => InputDecoration(
     labelText: label,
-    hintText: hint ?? 'Saisir ici...',
-    alignLabelWithHint: alignLabelWithHint,
+    hintText: hint ?? 'Sélectionner...',
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     floatingLabelAlignment: FloatingLabelAlignment.start,
     labelStyle: const TextStyle(
@@ -84,10 +82,7 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
   );
 
   Future<void> _finish() async {
-    data['rem_text'] = _remarquesCtrl.text;
-    data['rem_pecheurReticent'] = _pecheurReticent;
-    data['rem_infoPartielle'] = _infoPartielle;
-    data['rem_gpsEstime'] = _gpsEstime;
+    data['Niveau_de_confiance'] = _selectedValue ?? '';
     showModernSuccessSnackBar(context);
 
     await Future.delayed(const Duration(milliseconds: 2100));
@@ -177,18 +172,30 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
                     children: [
                       _sectionCard(
                         children: [
-                          TextFormField(
-                            controller: _remarquesCtrl,
-                            maxLines: 12,
-                            minLines: 6,
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedValue,
                             decoration: _dec(
                               label: "Niveau de confiance",
-                              hint:
-                                  "Ex: Niveau de confiance",
-                              alignLabelWithHint: true,
+                              hint: "Choisir le niveau de confiance...",
                             ),
+                            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF1E3A8A)),
+                            items: _confianceOptions.map((String val) {
+                              return DropdownMenuItem<String>(
+                                value: val,
+                                child: Text(
+                                  val,
+                                  style: const TextStyle(
+                                    color: Color(0xFF1E3A8A),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                             onChanged: (v) {
-                              data['Niveau de confiance_niveau de confiance'] = v;
+                              setState(() {
+                                _selectedValue = v;
+                              });
+                              data['Niveau_de_confiance'] = v ?? '';
                               _service.scheduleFullDataSave(
                                 widget.formId,
                                 data,
@@ -197,7 +204,7 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       _PrimaryGradientButton(
                         text: 'Terminer',
                         icon: Icons.check,
@@ -216,7 +223,7 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
 
   Widget _sectionCard({required List<Widget> children}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),

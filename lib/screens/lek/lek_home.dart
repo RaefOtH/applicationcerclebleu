@@ -64,7 +64,7 @@ class _LekHomeState extends State<LekHome>
       }
       final csv = _csvService.buildCsvFromSingleForm(
         doc: doc.data()!,
-        dataKeys: terrainDataKeys,
+        dataKeys: lekDataKeys,
         headers: const {},
       );
       final fileName = 'lek_form_${_csvService.fileStampNow()}.csv';
@@ -150,7 +150,7 @@ class _LekHomeState extends State<LekHome>
           UniteDePechePage(formId: widget.formId, data: _data)),
       ),
       _GridItem(
-        title: 'Dynamique du crabe/n photos des deux espèces',
+        title: 'Dynamique du crabe (photos des deux espèces)',
         icon: Icons.inventory_2_outlined,
         color: const Color(0xFF00B8B8),
         onTap: () => _open(

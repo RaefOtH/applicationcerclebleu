@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'location_picker_widget.dart';
 
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
+import '../../services/lek_form_service.dart';
 import 'unite_de_peche_page.dart';
+import 'general_page.dart';
 import 'lek_home.dart';
 
 class InfoPage extends StatefulWidget {
@@ -17,28 +17,9 @@ class InfoPage extends StatefulWidget {
 
 class _InfoPageState extends State<InfoPage>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _locationController = TextEditingController();
-
-  Future<void> _selectLocation(BuildContext context) async {
-    final String? result = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LocationPickerWidget(),
-      ),
-    );
-
-    // Si l'utilisateur a validé une position, on met à jour le champ textuel
-    if (result != null && mounted) {
-      setState(() {
-        _locationController.text = result;
-      });
-    }
-    data['Zone de pêche'] = _locationController.text;
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
 
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
+  final LekFormService _service = LekFormService();
 
   final _CodePecheurCtrl = TextEditingController();
   final _AgeCtrl = TextEditingController();
@@ -53,7 +34,8 @@ class _InfoPageState extends State<InfoPage>
   final Map<String, TextEditingController> _dynamicCtrls = {};
 
   late AnimationController _waveController;
-
+  String? _selectedExperience;
+  String? _selectedZone;
   String? _selectedActivity;
 final TextEditingController _otherActivityController = TextEditingController();
 
@@ -61,19 +43,18 @@ final TextEditingController _otherActivityController = TextEditingController();
   void initState() {
     super.initState();
     data = widget.data;
-    _CodePecheurCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _AgeCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _GenreCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _ExperienceCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _EtatCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _RoleCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _NiveauCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _Cnsstrl.text = (data['suivi_fin'] ?? '').toString();
-    _PecheActCtrl.text = (data['suivi_fin'] ?? '').toString();
-    _ZoneCtrl.text = (data['suivi_fin'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
+    _CodePecheurCtrl.text = (data['info_code_du_pecheur'] ?? '').toString();
+    _AgeCtrl.text = (data['info_age'] ?? '').toString();
+    _GenreCtrl.text = (data['info_genre'] ?? '').toString();
+    _ExperienceCtrl.text = (data['info_experience'] ?? '').toString();
+    _EtatCtrl.text = (data['info_etat_civil'] ?? '').toString();
+    _RoleCtrl.text = (data['info_role_à_bord_du_bateau'] ?? '').toString();
+    _NiveauCtrl.text = (data['info_niveauInstruction'] ?? '').toString();
+    _Cnsstrl.text = (data['info_cnss'] ?? '').toString();
+    _PecheActCtrl.text = (data['info_peche_activité'] ?? '').toString();
+    _ZoneCtrl.text = (data['info_zone_de_Peche'] ?? '').toString();
+
     //_selectedEnginOption = _findEnginOption(savedLabel, savedCode);
 
     _waveController = AnimationController(
@@ -110,10 +91,9 @@ final TextEditingController _otherActivityController = TextEditingController();
     return null;
   }*/
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
+  String? _safeOption(dynamic raw) {
+    if (raw.toString().isEmpty) {return null;}
+    else {return raw.toString();}
   }
 
   InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
@@ -234,8 +214,8 @@ final TextEditingController _otherActivityController = TextEditingController();
 
       final txt = "$yearsText, $monthsText et $daysText";
       setState(() => _ExperienceCtrl.text = txt);
-      data['Experience'] = txt;
-      data['observationDate'] = txt;
+      data['info_experience'] = txt;
+      data['gen_DateObservation'] = txt;
       //_updateGeneratedObservationId();
       _service.scheduleFullDataSave(widget.formId, data);
     }
@@ -281,6 +261,12 @@ final TextEditingController _otherActivityController = TextEditingController();
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
       decoration: _dec(label, suffixIcon: suffixIcon),
+      validator: (value) {
+        if ((value == null || value.isEmpty) && label=='Zone de pêche') {
+          return 'Le champ Expérience et Zone ne peuvent pas être vides !';
+        }
+        return null;
+      },
       onChanged: (v) {
         data[key] = v;
         _service.scheduleFullDataSave(widget.formId, data);
@@ -325,36 +311,7 @@ final TextEditingController _otherActivityController = TextEditingController();
     );
   }
 */
-  void _goNext() {/*
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }*/
+  void _goNext() {
     _service.updateFormData(widget.formId, data, stepCompleted: 2);
     Navigator.push(
       context,
@@ -370,7 +327,7 @@ final TextEditingController _otherActivityController = TextEditingController();
       (route) => route.isFirst,
     );
   }
-
+  final _formKey = GlobalKey<FormState>();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -441,8 +398,13 @@ final TextEditingController _otherActivityController = TextEditingController();
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      _sectionCard(
-                        children: [/*
+                    _sectionCard(
+                    children: [
+                      Form(                        
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(children: [                          
+                          /*
                           DropdownButtonFormField<String>(
                             initialValue: _selectedTypeObservation,
                             isExpanded: true,
@@ -527,7 +489,7 @@ final TextEditingController _otherActivityController = TextEditingController();
                             options: ['Homme','Femme', 'Autre'],
                             value: null,
                             onChanged: (v) {
-                              data['genre'] = v;
+                              data['info_genre'] = v;
                              _service.scheduleFullDataSave(widget.formId, data);
                              },
                           ),
@@ -545,6 +507,12 @@ final TextEditingController _otherActivityController = TextEditingController();
                                 onPressed: _pickDate,
                               ),
                             ),
+                            validator: (value) {
+                              if ((value == null || value.isEmpty)){
+                              return 'Le champ Expérience et Zone ne peuvent pas être vides !';
+                              }
+                              return null;
+                            },
                           ),
 
                           const SizedBox(height: 12),
@@ -554,7 +522,7 @@ final TextEditingController _otherActivityController = TextEditingController();
                             options: ['Propriétaire','Locataire'],
                             value: null,
                             onChanged: (v) {
-                              data['Propriétaire/Locataire'] = v;
+                              data['info_etat_civil']=v;
                              _service.scheduleFullDataSave(widget.formId, data);
                              },
                           ),
@@ -566,7 +534,7 @@ final TextEditingController _otherActivityController = TextEditingController();
                             options: ['Capitaine','Marin'],
                             value: null,
                             onChanged: (v) {
-                              data['Role (Capitaine/Marin)'] = v;
+                              data['info_role_à_bord_du_bateau'] = v;
                              _service.scheduleFullDataSave(widget.formId, data);
                              },
                           ),
@@ -586,7 +554,7 @@ final TextEditingController _otherActivityController = TextEditingController();
                             options: ['Oui','Non'],
                             value: null,
                             onChanged: (v) {
-                              data['Affiliation CNSS'] = v;
+                              data['info_cnss'] = v;
                              _service.scheduleFullDataSave(widget.formId, data);
                              },
                           ),
@@ -616,11 +584,11 @@ final TextEditingController _otherActivityController = TextEditingController();
                             });
                             if (newValue == 'Autre') {
                               _otherActivityController.clear();
-                              data['PecheActivite'] = 'Autre';
+                              data['info_peche_activité'] = 'Autre';
                             }
                             else {
-                              data['PecheActivite'] = newValue;
-                              data['PecheActivitePrecision'] = '';
+                              data['info_peche_activité'] = newValue;
+                              data['info_peche_activité_precision'] = '';
                               _service.scheduleFullDataSave(widget.formId, data);
                             }},
                           ),
@@ -631,7 +599,7 @@ final TextEditingController _otherActivityController = TextEditingController();
                               controller: _otherActivityController,
                               decoration: _dec('Veuillez préciser votre activité'), // Utilise votre méthode _dec
                               onChanged: (text) {
-                                data['Pêche activité principale Autre']= text;
+                                data['info_peche_activité_precision'] = text;
                                 _service.scheduleFullDataSave(widget.formId, data);
                               },
                             ),
@@ -639,14 +607,13 @@ final TextEditingController _otherActivityController = TextEditingController();
 
                           const SizedBox(height: 12),
 
-                          /*_field(
+                          _field(
                             controller: _ZoneCtrl,
                             label: 'Zone de pêche',
-                            key: 'Zone de pêche',
-                            numeric: true,
-                          ),*/
+                            key: 'info_zone_de_Peche',
+                          ),
 
-                          TextFormField(
+                          /*TextFormField(
                             controller: _locationController,
                             readOnly: true, // Empêche l'utilisateur d'écrire n'importe quoi manuellement
                             decoration: InputDecoration(
@@ -659,9 +626,9 @@ final TextEditingController _otherActivityController = TextEditingController();
                                 onPressed: () => _selectLocation(context),
                               ),
                             ),
-                          ),
+                          ),*/
                         ],
-                      ),
+                      ),),
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -669,7 +636,14 @@ final TextEditingController _otherActivityController = TextEditingController();
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => InformationsGeneralesPage(formId: widget.formId, data:data),
+                                    ),
+                                  );}
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -677,11 +651,25 @@ final TextEditingController _otherActivityController = TextEditingController();
                             child: _PrimaryGradientButton(
                               text: 'Suivant',
                               icon: Icons.arrow_forward,
-                              onPressed: _goNext,
+                              onPressed: () {
+                                
+                                if (_formKey.currentState!.validate()) {
+                                  _goNext();                                  
+                                }
+                                else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                    content: Text("Veuillez choisir une date début Expérience/ Zone de pêche."),
+                                    ),
+                                  );}
+                              },
+
                             ),
                           ),
                         ],
                       ),
+                    ],
+                    ),
                     ],
                   ),
                 ),

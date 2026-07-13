@@ -5,6 +5,7 @@ import '../../painters/wave_painter.dart';
 import '../../services/firestore_db.dart';
 import '../labo/donnees_laboratoire_home.dart';
 import '../terrain/matrice1_home.dart';
+import '../lek/lek_home.dart';
 import 'widgets/admin_role_guard.dart';
 
 class ResearcherDetailsScreen extends StatefulWidget {
@@ -256,6 +257,13 @@ class _ResearcherDetailsScreenState extends State<ResearcherDetailsScreen>
           builder: (_) => DonneesLaboratoireHome(formId: item.id),
         ),
       );
+    }
+    if (item.type == 'LEK') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => LekHome(formId: item.id)),
+      );
+      return;
     }
   }
 

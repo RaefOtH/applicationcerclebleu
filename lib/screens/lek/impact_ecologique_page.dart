@@ -1,14 +1,49 @@
 import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
-import 'impact_sur_la_peche_page.dart';
+import '../../services/lek_form_service.dart';
 import 'lek_home.dart';
+// TODO: replace with the actual next page of your flow if different.
+import 'dynamique_du_crabe_page.dart';
+import 'impact_sur_la_peche_page.dart';
+
+/// Simple code/label pair used by the dropdowns of this page.
+class _OptionItem {
+  final String code;
+  final String label;
+  const _OptionItem(this.code, this.label);
+}
+
+/// A 1-5 evaluation level with an optional sign (+ / -), e.g. "3+", "2-", "4".
+class _ScoreValue {
+  int? score; // 1..5
+  String? sign; // '+' | '-' | null
+
+  _ScoreValue({this.score, this.sign});
+
+  String toStorageString() {
+    if (score == null) return '';
+    return '$score${sign ?? ''}';
+  }
+
+  static _ScoreValue fromStorageString(dynamic raw) {
+    final s = (raw ?? '').toString().trim();
+    if (s.isEmpty) return _ScoreValue();
+    final signChar = s.endsWith('+') || s.endsWith('-') ? s.substring(s.length - 1) : null;
+    final numPart = signChar != null ? s.substring(0, s.length - 1) : s;
+    final n = int.tryParse(numPart);
+    return _ScoreValue(score: n, sign: signChar);
+  }
+}
 
 class ImpactEcologiquePage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const ImpactEcologiquePage({super.key, required this.data, required this.formId});
+  const ImpactEcologiquePage({
+    super.key,
+    required this.data,
+    required this.formId,
+  });
 
   @override
   State<ImpactEcologiquePage> createState() => _ImpactEcologiquePageState();
@@ -16,256 +51,77 @@ class ImpactEcologiquePage extends StatefulWidget {
 
 class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _typeObservationOptions = [
-    'À bord',
-    'Au port',
-    'Expérimental',
+  static const List<_OptionItem> _ouiNonOptions = [
+    _OptionItem('Oui', 'Oui'),
+    _OptionItem('Non', 'Non'),
   ];
 
-  static const List<_EnginOption> _enginOptions = [
-    _EnginOption(
-      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
-      code: 'CHALUTS',
-      group: 'chalut',
-    ),
-    _EnginOption(
-      label: 'Senne tournante coulissante : PS',
-      code: 'PS',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets tournants : SUX',
-      code: 'SUX',
-      group: 'minimal',
-    ),
-    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
-    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
-    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
-    _EnginOption(
-      label: 'Trémails et maillants combinés : GTN',
-      code: 'GTN',
-      group: 'comb',
-    ),
-    _EnginOption(
-      label: 'Filets maillants dérivants : GND',
-      code: 'GND',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets maillants encerclants : GNC',
-      code: 'GNC',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
-      code: 'GTR',
-      group: 'tr',
-    ),
-    _EnginOption(
-      label: 'Filets monofilament : MoFi',
-      code: 'MoFi',
-      group: 'mofi',
-    ),
-    _EnginOption(
-      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
-      code: 'FIX',
-      group: 'fix',
-    ),
-    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
+  static const List<_OptionItem> _tendanceOptions = [
+    _OptionItem('Aug', 'Augmentation (Aug)'),
+    _OptionItem('Dim', 'Diminution (Dim)'),
+    _OptionItem('St', 'Stable (St)'),
+    _OptionItem('Var', 'Variable (année(s) clé(s))'),
   ];
-
-  static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
-    'chalut': const [
-      _ConditionalFieldDef('suivi_chalut_type', 'Type de chalut'),
-      _ConditionalFieldDef(
-        'suivi_chalut_longueurRalingueInf',
-        'Longueur ralingue inférieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureVerticale',
-        'Ouverture verticale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureHorizontale',
-        'Ouverture horizontale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_mailleCul',
-        'Maille de cul de chalut',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
-    ],
-    'mofi': const [
-      _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
-    ],
-    'comb': const [
-      _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
-    ],
-    'tr': const [
-      _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
-    ],
-    'fenc': const [
-      _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_fenc_hauteurChute',
-        'Hauteur (chute)',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_mailleAile',
-        'Maille aile',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_maillePoche',
-        'Maille poche',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_typeFiletTournant',
-        'Type de filet tournant',
-      ),
-      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
-    ],
-    'fix': const [
-      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
-      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
-    ],
-    'minimal': const [
-      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
-    ],
-  };
-
-  static final Set<String> _legacyConditionalKeys = {
-    'suivi_nc_diametre',
-    'suivi_nc_hauteur',
-    'suivi_nc_ouverture',
-    'suivi_nc_maille',
-    'suivi_nc_nbre',
-    'suivi_nc_typeNasses',
-    'suivi_p_diametre',
-    'suivi_p_nbre',
-    'suivi_p_typePieges',
-  };
 
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
-
-  final _typeEnginAutreCtrl = TextEditingController();
-  final _nbPiecesCtrl = TextEditingController();
-  final _idNavireCtrl = TextEditingController();
-  final _idNasseCtrl = TextEditingController();
-  final _debutCtrl = TextEditingController();
-  final _finCtrl = TextEditingController();
-  final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedTypeObservation;
-  _EnginOption? _selectedEnginOption;
-
+  final LekFormService _service = LekFormService();
   late AnimationController _waveController;
+
+  // ---- impact sur les habitats
+  String? _habitatsOuiNon;
+  final _ScoreValue _herbiersDisparaissent = _ScoreValue();
+  final _ScoreValue _fondSeCreuse = _ScoreValue();
+  final _ScoreValue _retourneLeFond = _ScoreValue();
+  final TextEditingController _autreTexteCtrl = TextEditingController();
+  final _ScoreValue _autreScore = _ScoreValue();
+
+  // ---- impact sur la biodiversité
+  String? _biodiversiteOuiNon;
+  String? _tendance;
+  final TextEditingController _tendanceAnneesClesCtrl = TextEditingController();
+  final TextEditingController _depuisQuandCtrl = TextEditingController();
+  final TextEditingController _zonePlusAffecteeCtrl = TextEditingController();
+
+  final TextEditingController _espece1NomCtrl = TextEditingController();
+  final _ScoreValue _espece1Score = _ScoreValue();
+  final TextEditingController _espece2NomCtrl = TextEditingController();
+  final _ScoreValue _espece2Score = _ScoreValue();
+  final TextEditingController _espece3NomCtrl = TextEditingController();
+  final _ScoreValue _espece3Score = _ScoreValue();
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    _selectedTypeObservation = _safeOption(
-      data['suivi_typeObservation'],
-      _typeObservationOptions,
-    );
-    _typeEnginAutreCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _nbPiecesCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _idNavireCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _idNasseCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _debutCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _finCtrl.text = (data['suivi_fin'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
-    _selectedEnginOption = _findEnginOption(savedLabel, savedCode);
+    _habitatsOuiNon = _nullIfEmpty(data['impact_ecologique_habitats_ouiNon']);
+    _herbiersDisparaissentAssign(_ScoreValue.fromStorageString(
+        data['impact_ecologique_habitats_herbiersDisparaissent']));
+    _fondSeCreuseAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_fondSeCreuse']));
+    _retourneLeFondAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_retourneLeFond']));
+    _autreTexteCtrl.text = (data['impact_ecologique_habitats_autreTexte'] ?? '').toString();
+    _autreScoreAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_autreScore']));
 
-    for (final defs in _conditionalFields.values) {
-      for (final def in defs) {
-        _dynamicCtrls.putIfAbsent(
-          def.key,
-          () => TextEditingController(text: (data[def.key] ?? '').toString()),
-        );
-      }
-    }
+    _biodiversiteOuiNon = _nullIfEmpty(data['impact_ecologique_biodiversite_ouiNon']);
+    _tendance = _nullIfEmpty(data['impact_ecologique_biodiversite_tendance']);
+    _tendanceAnneesClesCtrl.text =
+        (data['impact_ecologique_biodiversite_tendanceAnneesCles'] ?? '').toString();
+    _depuisQuandCtrl.text = (data['impact_ecologique_biodiversite_depuisQuand'] ?? '').toString();
+    _zonePlusAffecteeCtrl.text =
+        (data['impact_ecologique_biodiversite_zonePlusAffectee'] ?? '').toString();
+
+    _espece1NomCtrl.text = (data['impact_ecologique_biodiversite_espece1_nom'] ?? '').toString();
+    _espece1ScoreAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece1_score']));
+    _espece2NomCtrl.text = (data['impact_ecologique_biodiversite_espece2_nom'] ?? '').toString();
+    _espece2ScoreAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece2_score']));
+    _espece3NomCtrl.text = (data['impact_ecologique_biodiversite_espece3_nom'] ?? '').toString();
+    _espece3ScoreAssign(
+        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece3_score']));
 
     _waveController = AnimationController(
       vsync: this,
@@ -273,38 +129,74 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     )..repeat();
   }
 
+  // Small helpers so field values loaded from `data` land in the right
+  // `_ScoreValue` instance (fields are `final`, only their content mutates).
+  void _herbiersDisparaissentAssign(_ScoreValue v) {
+    _herbiersDisparaissent.score = v.score;
+    _herbiersDisparaissent.sign = v.sign;
+  }
+
+  void _fondSeCreuseAssign(_ScoreValue v) {
+    _fondSeCreuse.score = v.score;
+    _fondSeCreuse.sign = v.sign;
+  }
+
+  void _retourneLeFondAssign(_ScoreValue v) {
+    _retourneLeFond.score = v.score;
+    _retourneLeFond.sign = v.sign;
+  }
+
+  void _autreScoreAssign(_ScoreValue v) {
+    _autreScore.score = v.score;
+    _autreScore.sign = v.sign;
+  }
+
+  void _espece1ScoreAssign(_ScoreValue v) {
+    _espece1Score.score = v.score;
+    _espece1Score.sign = v.sign;
+  }
+
+  void _espece2ScoreAssign(_ScoreValue v) {
+    _espece2Score.score = v.score;
+    _espece2Score.sign = v.sign;
+  }
+
+  void _espece3ScoreAssign(_ScoreValue v) {
+    _espece3Score.score = v.score;
+    _espece3Score.sign = v.sign;
+  }
+
+  static String? _nullIfEmpty(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   @override
   void dispose() {
-    _typeEnginAutreCtrl.dispose();
-    _nbPiecesCtrl.dispose();
-    _idNavireCtrl.dispose();
-    _idNasseCtrl.dispose();
-    _debutCtrl.dispose();
-    _finCtrl.dispose();
-    for (final ctrl in _dynamicCtrls.values) {
-      ctrl.dispose();
-    }
+    _autreTexteCtrl.dispose();
+    _tendanceAnneesClesCtrl.dispose();
+    _depuisQuandCtrl.dispose();
+    _zonePlusAffecteeCtrl.dispose();
+    _espece1NomCtrl.dispose();
+    _espece2NomCtrl.dispose();
+    _espece3NomCtrl.dispose();
     _waveController.dispose();
     super.dispose();
   }
 
-  _EnginOption? _findEnginOption(String label, String code) {
-    for (final option in _enginOptions) {
-      if (label.isNotEmpty && option.label == label) return option;
-      if (code.isNotEmpty && option.code == code) return option;
-    }
-    return null;
+  void _save(String key, String value) {
+    data[key] = value;
+    _service.scheduleFullDataSave(widget.formId, data);
   }
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
-  }
+  void _saveScore(String key, _ScoreValue v) => _save(key, v.toStorageString());
 
-  InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
+  InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
     labelText: label,
     hintText: 'Saisir ici...',
+    helperText: helperText,
+    helperMaxLines: 2,
+    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     floatingLabelAlignment: FloatingLabelAlignment.start,
@@ -316,7 +208,6 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
       color: Color(0xFF1E3A8A),
       fontWeight: FontWeight.w700,
     ),
-    suffixIcon: suffixIcon,
     filled: true,
     fillColor: const Color(0xFFF8FBFF),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -334,156 +225,294 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     ),
   );
 
-  Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-    );
-    if (picked != null) {
-      final hh = picked.hour.toString().padLeft(2, '0');
-      final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = '$hh:$mm';
-      setState(() => ctrl.text = txt);
-      data[key] = txt;
-      _service.scheduleFullDataSave(widget.formId, data);
-    }
-  }
-
-  void _onTypeEnginChanged(_EnginOption? option) {
-    setState(() => _selectedEnginOption = option);
-    if (option == null) {
-      data.remove('suivi_typeEngin');
-      data.remove('suivi_typeEnginCode');
-    } else {
-      data['suivi_typeEngin'] = option.label;
-      data['suivi_typeEnginCode'] = option.code;
-    }
-    _clearInactiveConditionalData();
-    if (option == null || option.code != 'AUTRE') {
-      _typeEnginAutreCtrl.clear();
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
-
-  void _clearInactiveConditionalData() {
-    final activeGroup = _selectedEnginOption?.group;
-    for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeGroup) continue;
-      for (final def in entry.value) {
-        data.remove(def.key);
-        _dynamicCtrls[def.key]?.clear();
-      }
-    }
-    for (final key in _legacyConditionalKeys) {
-      data.remove(key);
-    }
-  }
-
-  Widget _field({
+  Widget _textField({
     required TextEditingController controller,
     required String label,
-    required String key,
+    required String dataKey,
+    String? helperText,
     bool numeric = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      decoration: _dec(label, suffixIcon: suffixIcon),
+      decoration: _dec(label, helperText: helperText),
+      onChanged: (v) => _save(dataKey, v),
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required List<_OptionItem> options,
+    required String? value,
+    required String dataKey,
+    required ValueChanged<String?> onChanged,
+    String? helperText,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: _dec(label, helperText: helperText),
+      hint: const Text('Choisir...'),
+      items: options
+          .map(
+            (o) => DropdownMenuItem<String>(
+              value: o.code,
+              child: Text(o.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
       onChanged: (v) {
-        data[key] = v;
-        _service.scheduleFullDataSave(widget.formId, data);
+        onChanged(v);
+        _save(dataKey, v ?? '');
       },
     );
   }
 
-  Widget _buildConditionalSection() {
-    final group = _selectedEnginOption?.group;
-    if (group == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[group];
-    if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Détails type d'engin",
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
+  // ---- Header bars matching the dark / light gray rows of the Excel sheet.
+
+  Widget _sectionHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 4, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF52565C),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 15,
+        ),
+      ),
+    );
+  }
+
+  Widget _subHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCDEE2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _plainLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _gap() => const SizedBox(height: 12);
+
+  /// One circular 1..5 pick button used inside the score rating field.
+  Widget _scoreDot({
+    required int n,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? const Color(0xFF00D9D9) : Colors.white,
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF00D9D9)
+                : Colors.grey.shade300,
+            width: 1.5,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          '$n',
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
           ),
         ),
-        const SizedBox(height: 12),
-        ...List.generate(defs.length, (index) {
-          final def = defs[index];
-          final widget = _field(
-            controller: _dynamicCtrls[def.key]!,
-            label: def.label,
-            key: def.key,
-            numeric: def.numeric,
-          );
-          if (index == defs.length - 1) return widget;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: widget,
-          );
-        }),
-      ],
+      ),
+    );
+  }
+
+  /// One '+' or '-' pick button used inside the score rating field.
+  Widget _signDot({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? const Color(0xFF1E3A8A) : Colors.white,
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF1E3A8A)
+                : const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A "niveau d'évaluation" field: pick a level 1 to 5 and, optionally,
+  /// a sign (+ or -) to nuance it — e.g. "4+" or "2-".
+  Widget _scoreSignField({
+    required String label,
+    required String dataKey,
+    required _ScoreValue value,
+    String? helperText,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF1E3A8A),
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          if (helperText != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              helperText,
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (int n = 1; n <= 5; n++)
+                _scoreDot(
+                  n: n,
+                  selected: value.score == n,
+                  onTap: () => setState(() {
+                    value.score = value.score == n ? null : n;
+                    _saveScore(dataKey, value);
+                  }),
+                ),
+              const SizedBox(width: 10),
+              _signDot(
+                label: '+',
+                selected: value.sign == '+',
+                onTap: () => setState(() {
+                  value.sign = value.sign == '+' ? null : '+';
+                  _saveScore(dataKey, value);
+                }),
+              ),
+              const SizedBox(width: 6),
+              _signDot(
+                label: '-',
+                selected: value.sign == '-',
+                onTap: () => setState(() {
+                  value.sign = value.sign == '-' ? null : '-';
+                  _saveScore(dataKey, value);
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _especeBlock({
+    required String title,
+    required TextEditingController nomCtrl,
+    required String nomKey,
+    required _ScoreValue score,
+    required String scoreKey,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _plainLabel(title),
+          _textField(controller: nomCtrl, label: 'Nom', dataKey: nomKey),
+          _gap(),
+          _scoreSignField(
+            label: 'Score',
+            dataKey: scoreKey,
+            value: score,
+            helperText: '1-5 avec + et -',
+          ),
+        ],
+      ),
     );
   }
 
   void _goNext() {
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data: data),
-      ),
-    );
+    _service.updateFormData(widget.formId, data, stepCompleted: 3);
+
+    Navigator.push(context, MaterialPageRoute(
+       builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data: data),
+     ));
   }
 
   void _goToLekHome() {
@@ -540,7 +569,7 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                       ),
                       const SizedBox(width: 4),
                       const Text(
-                        'Suivi',
+                        'Impact écologique',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -549,7 +578,7 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 2/5',
+                        'Étape 5/9',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
@@ -563,116 +592,121 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
+                      // ---- Impact sur les habitats
                       _sectionCard(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTypeObservation,
-                            isExpanded: true,
-                            decoration: _dec("Type d'observation"),
-                            hint: const Text('Choisir...'),
-                            items: _typeObservationOptions
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(
-                                      item,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedTypeObservation = value);
-                              if (value == null) {
-                                data.remove('suivi_typeObservation');
-                              } else {
-                                data['suivi_typeObservation'] = value;
-                              }
-                              _service.scheduleFullDataSave(
-                                widget.formId,
-                                data,
-                              );
-                            },
+                          _sectionHeader('Impact sur les habitats'),
+                          _dropdownField(
+                            label: 'Impact sur les habitats',
+                            options: _ouiNonOptions,
+                            value: _habitatsOuiNon,
+                            dataKey: 'impact_ecologique_habitats_ouiNon',
+                            onChanged: (v) => setState(() => _habitatsOuiNon = v),
+                            helperText: 'oui / non',
                           ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<_EnginOption>(
-                            initialValue: _selectedEnginOption,
-                            isExpanded: true,
-                            decoration: _dec("Type d'engin"),
-                            hint: const Text('Choisir...'),
-                            items: _enginOptions
-                                .map(
-                                  (option) => DropdownMenuItem<_EnginOption>(
-                                    value: option,
-                                    child: Text(
-                                      option.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: _onTypeEnginChanged,
+                          _subHeader('Détail des changements'),
+                          _scoreSignField(
+                            label: 'Herbiers disparaissent',
+                            dataKey: 'impact_ecologique_habitats_herbiersDisparaissent',
+                            value: _herbiersDisparaissent,
+                            helperText: 'score 1-5',
                           ),
-                          if (_selectedEnginOption?.code == 'AUTRE') ...[
-                            const SizedBox(height: 12),
-                            _field(
-                              controller: _typeEnginAutreCtrl,
-                              label: 'Préciser',
-                              key: 'suivi_typeEnginAutre',
+                          _gap(),
+                          _scoreSignField(
+                            label: 'Fond se creuse',
+                            dataKey: 'impact_ecologique_habitats_fondSeCreuse',
+                            value: _fondSeCreuse,
+                            helperText: 'score 1-5',
+                          ),
+                          _gap(),
+                          _scoreSignField(
+                            label: 'Retourne le fond',
+                            dataKey: 'impact_ecologique_habitats_retourneLeFond',
+                            value: _retourneLeFond,
+                            helperText: 'score 1-5',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _autreTexteCtrl,
+                            label: 'Autre (à préciser)',
+                            dataKey: 'impact_ecologique_habitats_autreTexte',
+                          ),
+                          _gap(),
+                          _scoreSignField(
+                            label: 'Autre - score',
+                            dataKey: 'impact_ecologique_habitats_autreScore',
+                            value: _autreScore,
+                            helperText: 'score 1-5',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // ---- Impact sur la biodiversité
+                      _sectionCard(
+                        children: [
+                          _sectionHeader('Impact sur la biodiversité'),
+                          _dropdownField(
+                            label: 'Impact sur la biodiversité',
+                            options: _ouiNonOptions,
+                            value: _biodiversiteOuiNon,
+                            dataKey: 'impact_ecologique_biodiversite_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _biodiversiteOuiNon = v),
+                            helperText: 'oui / non',
+                          ),
+                          _subHeader('Détail des changements'),
+                          _dropdownField(
+                            label: 'Tendance',
+                            options: _tendanceOptions,
+                            value: _tendance,
+                            dataKey: 'impact_ecologique_biodiversite_tendance',
+                            onChanged: (v) => setState(() => _tendance = v),
+                            helperText: 'Aug / Dim / St / Var (année clés)',
+                          ),
+                          if (_tendance == 'Var') ...[
+                            _gap(),
+                            _textField(
+                              controller: _tendanceAnneesClesCtrl,
+                              label: 'Année(s) clé(s)',
+                              dataKey: 'impact_ecologique_biodiversite_tendanceAnneesCles',
                             ),
                           ],
-                          if (_selectedEnginOption != null) ...[
-                            const SizedBox(height: 12),
-                            _buildConditionalSection(),
-                          ],
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _nbPiecesCtrl,
-                            label: 'Nombre de pièces (nasse/filet)',
-                            key: 'suivi_nbPieces',
+                          _gap(),
+                          _textField(
+                            controller: _depuisQuandCtrl,
+                            label: 'Depuis quand',
+                            dataKey: 'impact_ecologique_biodiversite_depuisQuand',
+                            helperText: 'année',
                             numeric: true,
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNavireCtrl,
-                            label: 'ID du navire (Nom & Immatriculation)',
-                            key: 'suivi_idNavire',
+                          _gap(),
+                          _textField(
+                            controller: _zonePlusAffecteeCtrl,
+                            label: 'Zone la plus affectée',
+                            dataKey: 'impact_ecologique_biodiversite_zonePlusAffectee',
+                            helperText: 'Nom / carte (*)',
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNasseCtrl,
-                            label: 'ID de la nasse',
-                            key: 'suivi_idNasse',
-                            numeric: true,
+                          _plainLabel('Espèces les plus affectées'),
+                          _especeBlock(
+                            title: 'Espèce 1',
+                            nomCtrl: _espece1NomCtrl,
+                            nomKey: 'impact_ecologique_biodiversite_espece1_nom',
+                            score: _espece1Score,
+                            scoreKey: 'impact_ecologique_biodiversite_espece1_score',
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _debutCtrl,
-                            label: 'Opération de pêche - Début (24h)',
-                            key: 'suivi_debut',
-                            readOnly: true,
-                            onTap: () =>
-                                _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            ),
+                          _especeBlock(
+                            title: 'Espèce 2',
+                            nomCtrl: _espece2NomCtrl,
+                            nomKey: 'impact_ecologique_biodiversite_espece2_nom',
+                            score: _espece2Score,
+                            scoreKey: 'impact_ecologique_biodiversite_espece2_score',
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _finCtrl,
-                            label: 'Opération de pêche - Fin (24h)',
-                            key: 'suivi_fin',
-                            readOnly: true,
-                            onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_finCtrl, 'suivi_fin'),
-                            ),
+                          _especeBlock(
+                            title: 'Espèce 3',
+                            nomCtrl: _espece3NomCtrl,
+                            nomKey: 'impact_ecologique_biodiversite_espece3_nom',
+                            score: _espece3Score,
+                            scoreKey: 'impact_ecologique_biodiversite_espece3_score',
                           ),
                         ],
                       ),
@@ -683,7 +717,14 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => DynamiqueDuCrabePage(formId: widget.formId, data:data),
+                                    ),
+                                  );}
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -725,29 +766,9 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
-}
-
-class _EnginOption {
-  final String label;
-  final String code;
-  final String group;
-
-  const _EnginOption({
-    required this.label,
-    required this.code,
-    required this.group,
-  });
-}
-
-class _ConditionalFieldDef {
-  final String key;
-  final String label;
-  final bool numeric;
-
-  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
 }
 
 class _PrimaryGradientButton extends StatelessWidget {

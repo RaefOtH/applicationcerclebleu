@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../painters/wave_painter.dart';
-import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
-import '../utils/auth_debug.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,10 +18,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _pinController = TextEditingController();
+  
   final AuthService _authService = AuthService();
   final UserService _userService = UserService();
+  
   bool _loading = false;
   String _selectedRole = 'chercheur';
+  String? _emailErrorText; // <-- Pour gérer l'erreur de l'email en rouge
   late AnimationController _waveController;
 
   @override
@@ -33,6 +34,13 @@ class _RegisterScreenState extends State<RegisterScreen>
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
+
+    // Écouter les changements de l'email pour retirer le rouge dès que l'utilisateur corrige
+    _emailController.addListener(() {
+      if (_emailErrorText != null) {
+        setState(() => _emailErrorText = null);
+      }
+    });
   }
 
   @override
@@ -54,18 +62,25 @@ class _RegisterScreenState extends State<RegisterScreen>
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
+    // 1. Contrôle du format de l'email (Détection visuelle rouge)
+    if (!_isValidEmail(email)) {
+      setState(() {
+        _emailErrorText = "Le format de l'e-mail n'est pas valide ou cet e-mail n'existe pas.";
+      });
+      return;
+    }
+
+    if (fullName.isEmpty || password.isEmpty) {
       _showSnack('Veuillez remplir tous les champs');
       return;
     }
-    if (!_isValidEmail(email)) {
-      _showSnack('Email invalide');
+
+    final passwordRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
+    if (!passwordRegex.hasMatch(password)) {
+      _showSnack('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.');
       return;
     }
-    if (password.length < 6) {
-      _showSnack('Mot de passe trop court (min 6)');
-      return;
-    }
+    
     if (_selectedRole == 'admin') {
       final pin = _pinController.text.trim();
       if (pin.isEmpty) {
@@ -80,32 +95,46 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => _loading = true);
     try {
+      // Création du compte Firebase Auth
       final cred = await _authService.register(email, password);
       final user = cred.user;
-      if (user == null) {
-        throw FirebaseAuthException(
-          code: 'internal-error',
-          message: 'Utilisateur introuvable apres inscription.',
-        );
-      }
-      final role = _selectedRole;
+      if (user == null) throw Exception('Utilisateur introuvable');
+
+      // 2. Envoi de l'e-mail de vérification (seul juge de la réalité de l'adresse)
+      await user.sendEmailVerification();
+
+      // 3. Création du profil utilisateur en mode "non vérifié" ou en attente
       await _userService.createUserProfile(
         uid: user.uid,
         fullName: fullName,
         email: email,
-        role: role,
+        role: _selectedRole,
       );
-      authDebugLog('[Register] uid=${user.uid} role_ecrit_firestore=$role');
+
+      // On déconnecte immédiatement pour détruire la session active non vérifiée
+      await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Compte créé avec succès')));
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.authGate,
-        (route) => false,
+
+      // Boîte de dialogue explicite
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Vérification requise'),
+          content: Text('Un lien de confirmation a été envoyé à $email. L\'inscription ne sera validée que lorsque vous aurez cliqué sur ce lien.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Ferme la boîte
+                Navigator.pop(context); // Retourne à la page de Login
+              },
+              child: const Text('Compris'),
+            ),
+          ],
+        ),
       );
+
     } on FirebaseAuthException catch (e) {
       _showSnack(_authService.mapError(e));
     } catch (_) {
@@ -118,9 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -133,13 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF2D4BA8),
-                    Color(0xFF1E3A8A),
-                  ],
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2D4BA8), Color(0xFF1E3A8A)],
                 ),
               ),
               child: AnimatedBuilder(
@@ -175,10 +196,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF00D9D9).withValues(alpha: 0.08),
@@ -189,50 +206,28 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       child: Column(
         children: [
-          Image.asset(
-            'assets/images/logo.png',
-            width: 220,
-            height: 160,
-            fit: BoxFit.contain,
-          ),
+          Image.asset('assets/images/logo.png', width: 220, height: 160, fit: BoxFit.contain),
           const SizedBox(height: 8),
-          const Text(
-            'Inscription',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1E3A8A),
-            ),
-          ),
+          const Text('Inscription', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1E3A8A))),
           const SizedBox(height: 20),
-          _buildTextField(
-            controller: _nameController,
-            hint: 'Nom complet',
-            icon: Icons.person_outline,
-          ),
+          _buildTextField(controller: _nameController, hint: 'Nom complet', icon: Icons.person_outline),
           const SizedBox(height: 12),
+          
+          // CHAMP EMAIL MODIFIÉ (Prend en compte l'état d'erreur rouge)
           _buildTextField(
             controller: _emailController,
             hint: 'Email',
             icon: Icons.email_outlined,
+            errorText: _emailErrorText, 
           ),
+          
           const SizedBox(height: 12),
-          _buildTextField(
-            controller: _passwordController,
-            hint: 'Mot de passe',
-            icon: Icons.lock_outline,
-            obscureText: true,
-          ),
+          _buildTextField(controller: _passwordController, hint: 'Mot de passe', icon: Icons.lock_outline, obscureText: true),
           const SizedBox(height: 12),
           _buildRoleSelector(),
           if (_selectedRole == 'admin') ...[
             const SizedBox(height: 12),
-            _buildTextField(
-              controller: _pinController,
-              hint: 'Code PIN Admin',
-              icon: Icons.lock_outline,
-              obscureText: true,
-            ),
+            _buildTextField(controller: _pinController, hint: 'Code PIN Admin', icon: Icons.lock_outline, obscureText: true),
           ],
           const SizedBox(height: 20),
           _buildGradientButton(
@@ -241,9 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
           const SizedBox(height: 12),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Retour à la connexion'),
           ),
         ],
@@ -256,6 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     required String hint,
     required IconData icon,
     bool obscureText = false,
+    String? errorText, // <-- Ajouté
   }) {
     return TextField(
       controller: controller,
@@ -265,45 +259,25 @@ class _RegisterScreenState extends State<RegisterScreen>
         prefixIcon: Icon(icon, color: const Color(0xFF1E3A8A)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-        ),
+        errorText: errorText, // S'affiche en rouge si non null
+        errorMaxLines: 2,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.red, width: 1.5)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.red, width: 2)),
       ),
     );
   }
 
-  Widget _buildGradientButton({
-    required String text,
-    required VoidCallback? onPressed,
-  }) {
+  Widget _buildGradientButton({required String text, required VoidCallback? onPressed}) {
     return SizedBox(
       width: double.infinity,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)],
-          ),
+          gradient: const LinearGradient(colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)]),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF00D9D9).withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Material(
           color: Colors.transparent,
@@ -312,16 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             onTap: onPressed,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              child: Center(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700))),
             ),
           ),
         ),
@@ -333,16 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Type de compte',
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+        const Align(alignment: Alignment.centerLeft, child: Text('Type de compte', style: TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.w600))),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -365,19 +321,9 @@ class _RegisterScreenState extends State<RegisterScreen>
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF00D9D9) : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF00D9D9) : Colors.grey.shade300,
-          ),
+          border: Border.all(color: isSelected ? const Color(0xFF00D9D9) : Colors.grey.shade300),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+        child: Center(child: Text(label, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFF1E3A8A), fontWeight: FontWeight.w600))),
       ),
     );
   }

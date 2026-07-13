@@ -53,7 +53,7 @@ class _LekFormsListScreenState extends State<LekFormsListScreen>
 
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 750), () {
       if (!mounted) return;
       setState(() => _searchTerm = value.trim().toLowerCase());
     });

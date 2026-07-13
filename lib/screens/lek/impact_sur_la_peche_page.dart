@@ -1,14 +1,36 @@
 import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
-import '../../services/terrain_form_service.dart';
-import 'adaptation_locale_page.dart';
+import '../../services/lek_form_service.dart';
 import 'lek_home.dart';
+// TODO: replace with the actual previous/next pages of your flow if different.
+import 'impact_ecologique_page.dart';
+import 'adaptation_locale_page.dart';
+
+/// Simple code/label pair used by the dropdowns of this page.
+class _OptionItem {
+  final String code;
+  final String label;
+  const _OptionItem(this.code, this.label);
+}
+
+/// A free-text name with an optional qualifying sign (+ / -),
+/// e.g. "Callinectes sapidus" tagged "+".
+class _NomSignValue {
+  final TextEditingController nomCtrl = TextEditingController();
+  String? sign; // '+' | '-' | null
+
+  void dispose() => nomCtrl.dispose();
+}
 
 class ImpactSurLaPechePage extends StatefulWidget {
   final Map<String, dynamic> data;
   final String formId;
-  const ImpactSurLaPechePage({super.key, required this.data, required this.formId});
+  const ImpactSurLaPechePage({
+    super.key,
+    required this.data,
+    required this.formId,
+  });
 
   @override
   State<ImpactSurLaPechePage> createState() => _ImpactSurLaPechePageState();
@@ -16,256 +38,177 @@ class ImpactSurLaPechePage extends StatefulWidget {
 
 class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
     with SingleTickerProviderStateMixin {
-  static const List<String> _typeObservationOptions = [
-    'À bord',
-    'Au port',
-    'Expérimental',
+  static const List<_OptionItem> _ouiNonOptions = [
+    _OptionItem('Oui', 'Oui'),
+    _OptionItem('Non', 'Non'),
   ];
 
-  static const List<_EnginOption> _enginOptions = [
-    _EnginOption(
-      label: 'Chaluts : (TBB,OTB,OTT,OTP,PTB,TB,OTM,PTM,TM,TSP,TX)',
-      code: 'CHALUTS',
-      group: 'chalut',
-    ),
-    _EnginOption(
-      label: 'Senne tournante coulissante : PS',
-      code: 'PS',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets tournants : SUX',
-      code: 'SUX',
-      group: 'minimal',
-    ),
-    _EnginOption(label: 'Filet encerclant : LA', code: 'LA', group: 'fenc'),
-    _EnginOption(label: 'Seine de plage : SB', code: 'SB', group: 'minimal'),
-    _EnginOption(label: 'Seine : SX', code: 'SX', group: 'minimal'),
-    _EnginOption(
-      label: 'Trémails et maillants combinés : GTN',
-      code: 'GTN',
-      group: 'comb',
-    ),
-    _EnginOption(
-      label: 'Filets maillants dérivants : GND',
-      code: 'GND',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Filets maillants encerclants : GNC',
-      code: 'GNC',
-      group: 'minimal',
-    ),
-    _EnginOption(
-      label: 'Trémails : (GTR, GTRcrev, GTRseiche)',
-      code: 'GTR',
-      group: 'tr',
-    ),
-    _EnginOption(
-      label: 'Filets monofilament : MoFi',
-      code: 'MoFi',
-      group: 'mofi',
-    ),
-    _EnginOption(
-      label: 'Pièges (Nasses,casiers,pierre,gargoulettes,Verveux...) : FIX',
-      code: 'FIX',
-      group: 'fix',
-    ),
-    _EnginOption(label: 'Autre (préciser)', code: 'AUTRE', group: 'minimal'),
+  static const List<_OptionItem> _frequenceOptions = [
+    _OptionItem('Jamais', 'Jamais'),
+    _OptionItem('Rarement', 'Rarement'),
+    _OptionItem('Souvent', 'Souvent'),
   ];
 
-  static final Map<String, List<_ConditionalFieldDef>> _conditionalFields = {
-    'chalut': const [
-      _ConditionalFieldDef('suivi_chalut_type', 'Type de chalut'),
-      _ConditionalFieldDef(
-        'suivi_chalut_longueurRalingueInf',
-        'Longueur ralingue inférieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureVerticale',
-        'Ouverture verticale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_ouvertureHorizontale',
-        'Ouverture horizontale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_chalut_mailleCul',
-        'Maille de cul de chalut',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_chalut_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_chalut_autre', 'Autre (préciser)'),
-    ],
-    'mofi': const [
-      _ConditionalFieldDef('suivi_mofi_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_mofi_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_mofi_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_mofi_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_mofi_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_mofi_autre', 'Autre (préciser)'),
-    ],
-    'comb': const [
-      _ConditionalFieldDef('suivi_comb_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_comb_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_comb_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_comb_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_comb_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_comb_autre', 'Autre (préciser)'),
-    ],
-    'tr': const [
-      _ConditionalFieldDef('suivi_tr_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef('suivi_tr_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleCentrale',
-        'Maille / Maille centrale',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_mailleExterieure',
-        'Maille extérieure',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbPiecesArmement',
-        'Nbre de pièces par armement',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_tr_nbArmements',
-        'Nbre armements',
-        numeric: true,
-      ),
-      _ConditionalFieldDef('suivi_tr_typeFiletDroit', 'Type de filet droit'),
-      _ConditionalFieldDef('suivi_tr_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_tr_autre', 'Autre (préciser)'),
-    ],
-    'fenc': const [
-      _ConditionalFieldDef('suivi_fenc_longueur', 'Longueur', numeric: true),
-      _ConditionalFieldDef(
-        'suivi_fenc_hauteurChute',
-        'Hauteur (chute)',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_mailleAile',
-        'Maille aile',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_maillePoche',
-        'Maille poche',
-        numeric: true,
-      ),
-      _ConditionalFieldDef(
-        'suivi_fenc_typeFiletTournant',
-        'Type de filet tournant',
-      ),
-      _ConditionalFieldDef('suivi_fenc_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fenc_autre', 'Autre (préciser)'),
-    ],
-    'fix': const [
-      _ConditionalFieldDef('suivi_fix_diametre', 'Diamètre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_hauteur', 'Hauteur', numeric: true),
-      _ConditionalFieldDef('suivi_fix_ouverture', 'Ouverture', numeric: true),
-      _ConditionalFieldDef('suivi_fix_maille', 'Maille', numeric: true),
-      _ConditionalFieldDef('suivi_fix_nbre', 'Nbre', numeric: true),
-      _ConditionalFieldDef('suivi_fix_typePiege', 'Type de piège'),
-      _ConditionalFieldDef('suivi_fix_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_fix_autre', 'Autre (préciser)'),
-    ],
-    'minimal': const [
-      _ConditionalFieldDef('suivi_engin_nomLocal', 'Nom local'),
-      _ConditionalFieldDef('suivi_engin_autre', 'Autre (préciser)'),
-    ],
-  };
+  static const List<_OptionItem> _tendanceCompleteOptions = [
+    _OptionItem('Aug', 'Augmentation (Aug)'),
+    _OptionItem('Dim', 'Diminution (Dim)'),
+    _OptionItem('St', 'Stable (St)'),
+    _OptionItem('Var', 'Variable (année(s) clé(s))'),
+  ];
 
-  static final Set<String> _legacyConditionalKeys = {
-    'suivi_nc_diametre',
-    'suivi_nc_hauteur',
-    'suivi_nc_ouverture',
-    'suivi_nc_maille',
-    'suivi_nc_nbre',
-    'suivi_nc_typeNasses',
-    'suivi_p_diametre',
-    'suivi_p_nbre',
-    'suivi_p_typePieges',
-  };
+  static const List<_OptionItem> _tendanceSimpleOptions = [
+    _OptionItem('Aug', 'Augmentation (Aug)'),
+    _OptionItem('Dim', 'Diminution (Dim)'),
+    _OptionItem('St', 'Stable (St)'),
+  ];
+
+  static const List<_OptionItem> _acceptationOptions = [
+    _OptionItem('Non', 'Non'),
+    _OptionItem('±', '±'),
+    _OptionItem('Bonne', 'Bonne'),
+  ];
 
   late final Map<String, dynamic> data;
-  final TerrainFormService _service = TerrainFormService();
-
-  final _typeEnginAutreCtrl = TextEditingController();
-  final _nbPiecesCtrl = TextEditingController();
-  final _idNavireCtrl = TextEditingController();
-  final _idNasseCtrl = TextEditingController();
-  final _debutCtrl = TextEditingController();
-  final _finCtrl = TextEditingController();
-  final Map<String, TextEditingController> _dynamicCtrls = {};
-  String? _selectedTypeObservation;
-  _EnginOption? _selectedEnginOption;
-
+  final LekFormService _service = LekFormService();
   late AnimationController _waveController;
+
+  // ---- Dégâts / gêne générale
+  String? _degatsEngins;
+  final TextEditingController _enginPlusImpacteCtrl = TextEditingController();
+
+  String? _degatsPhysiquePecheurOuiNon;
+  final TextEditingController _degatsPhysiquePecheurDescriptionCtrl =
+      TextEditingController();
+
+  String? _augmentationChargeOuiNon;
+  final TextEditingController _augmentationChargeDescriptionCtrl =
+      TextEditingController();
+
+  String? _degatsPhysiqueCapturesOuiNon;
+
+  // ---- Evolutions des captures totales
+  String? _evolutionCapturesOuiNon;
+  String? _evolutionCapturesTendance;
+  final TextEditingController _evolutionCapturesTendanceAnneesClesCtrl =
+      TextEditingController();
+  final TextEditingController _evolutionCapturesDepuisQuandCtrl =
+      TextEditingController();
+  final TextEditingController _especeDominante1Ctrl = TextEditingController();
+  final TextEditingController _especeDominante2Ctrl = TextEditingController();
+  final TextEditingController _especeDominante3Ctrl = TextEditingController();
+
+  // ---- Evolution de la catégorie de taille des espèces capturées
+  String? _evolutionTailleOuiNon;
+  String? _evolutionTailleTendance;
+  final TextEditingController _evolutionTailleTendanceAnneesClesCtrl =
+      TextEditingController();
+  final TextEditingController _evolutionTailleDepuisQuandCtrl =
+      TextEditingController();
+  final TextEditingController _evolutionTailleZonePlusAffecteeCtrl =
+      TextEditingController();
+  final _NomSignValue _especeAffectee1 = _NomSignValue();
+  final _NomSignValue _especeAffectee2 = _NomSignValue();
+  final _NomSignValue _especeAffectee3 = _NomSignValue();
+
+  // ---- Impact sur la rentabilité du pêcheur
+  String? _acceptationCrabe;
+  String? _tendanceValeur;
+  final TextEditingController _tendanceValeurAnneesClesCtrl =
+      TextEditingController();
+
+  final TextEditingController _prixVenteConsommateurCtrl =
+      TextEditingController();
+  final TextEditingController _prixIndustrieCtrl = TextEditingController();
+  final TextEditingController _prixIntermediaireCtrl = TextEditingController();
+  String? _tendanceRentabilite;
+  String? _tendanceChiffreAffaire;
+  final TextEditingController _variationChiffreAffaireCtrl =
+      TextEditingController();
+  String? _tendanceDepenses;
+  final TextEditingController _variationDepensesCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    _selectedTypeObservation = _safeOption(
-      data['suivi_typeObservation'],
-      _typeObservationOptions,
-    );
-    _typeEnginAutreCtrl.text = (data['suivi_typeEnginAutre'] ?? '').toString();
-    _nbPiecesCtrl.text = (data['suivi_nbPieces'] ?? '').toString();
-    _idNavireCtrl.text = (data['suivi_idNavire'] ?? '').toString();
-    _idNasseCtrl.text = (data['suivi_idNasse'] ?? '').toString();
-    _debutCtrl.text = (data['suivi_debut'] ?? '').toString();
-    _finCtrl.text = (data['suivi_fin'] ?? '').toString();
 
-    final savedLabel = (data['suivi_typeEngin'] ?? '').toString().trim();
-    final savedCode = (data['suivi_typeEnginCode'] ?? '').toString().trim();
-    _selectedEnginOption = _findEnginOption(savedLabel, savedCode);
+    _degatsEngins = _nullIfEmpty(data['impact_peche_degatsEngins']);
+    _enginPlusImpacteCtrl.text =
+        (data['impact_peche_enginPlusImpacte'] ?? '').toString();
 
-    for (final defs in _conditionalFields.values) {
-      for (final def in defs) {
-        _dynamicCtrls.putIfAbsent(
-          def.key,
-          () => TextEditingController(text: (data[def.key] ?? '').toString()),
-        );
-      }
-    }
+    _degatsPhysiquePecheurOuiNon =
+        _nullIfEmpty(data['impact_peche_degatsPhysiquePecheur_ouiNon']);
+    _degatsPhysiquePecheurDescriptionCtrl.text =
+        (data['impact_peche_degatsPhysiquePecheur_description'] ?? '').toString();
+
+    _augmentationChargeOuiNon =
+        _nullIfEmpty(data['impact_peche_augmentationCharge_ouiNon']);
+    _augmentationChargeDescriptionCtrl.text =
+        (data['impact_peche_augmentationCharge_description'] ?? '').toString();
+
+    _degatsPhysiqueCapturesOuiNon =
+        _nullIfEmpty(data['impact_peche_degatsPhysiqueCaptures_ouiNon']);
+
+    _evolutionCapturesOuiNon =
+        _nullIfEmpty(data['impact_peche_evolutionCapturesTotales_ouiNon']);
+    _evolutionCapturesTendance =
+        _nullIfEmpty(data['impact_peche_evolutionCapturesTotales_tendance']);
+    _evolutionCapturesTendanceAnneesClesCtrl.text =
+        (data['impact_peche_evolutionCapturesTotales_tendanceAnneesCles'] ?? '')
+            .toString();
+    _evolutionCapturesDepuisQuandCtrl.text =
+        (data['impact_peche_evolutionCapturesTotales_depuisQuand'] ?? '').toString();
+    _especeDominante1Ctrl.text =
+        (data['impact_peche_evolutionCapturesTotales_espece1'] ?? '').toString();
+    _especeDominante2Ctrl.text =
+        (data['impact_peche_evolutionCapturesTotales_espece2'] ?? '').toString();
+    _especeDominante3Ctrl.text =
+        (data['impact_peche_evolutionCapturesTotales_espece3'] ?? '').toString();
+
+    _evolutionTailleOuiNon =
+        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_ouiNon']);
+    _evolutionTailleTendance =
+        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_tendance']);
+    _evolutionTailleTendanceAnneesClesCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_tendanceAnneesCles'] ?? '')
+            .toString();
+    _evolutionTailleDepuisQuandCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_depuisQuand'] ?? '').toString();
+    _evolutionTailleZonePlusAffecteeCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_zonePlusAffectee'] ?? '')
+            .toString();
+
+    _especeAffectee1.nomCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_espece1_nom'] ?? '').toString();
+    _especeAffectee1.sign =
+        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece1_signe']);
+    _especeAffectee2.nomCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_espece2_nom'] ?? '').toString();
+    _especeAffectee2.sign =
+        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece2_signe']);
+    _especeAffectee3.nomCtrl.text =
+        (data['impact_peche_evolutionTailleEspeces_espece3_nom'] ?? '').toString();
+    _especeAffectee3.sign =
+        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece3_signe']);
+
+    _acceptationCrabe = _nullIfEmpty(data['impact_peche_acceptationCrabe']);
+    _tendanceValeur = _nullIfEmpty(data['impact_peche_tendanceValeur']);
+    _tendanceValeurAnneesClesCtrl.text =
+        (data['impact_peche_tendanceValeurAnneesCles'] ?? '').toString();
+
+    _prixVenteConsommateurCtrl.text =
+        (data['impact_peche_prixVenteConsommateur'] ?? '').toString();
+    _prixIndustrieCtrl.text = (data['impact_peche_prixIndustrie'] ?? '').toString();
+    _prixIntermediaireCtrl.text =
+        (data['impact_peche_prixIntermediaireMareyeurs'] ?? '').toString();
+    _tendanceRentabilite = _nullIfEmpty(data['impact_peche_tendanceRentabilite']);
+    _tendanceChiffreAffaire =
+        _nullIfEmpty(data['impact_peche_tendanceChiffreAffaire']);
+    _variationChiffreAffaireCtrl.text =
+        (data['impact_peche_variationChiffreAffaire'] ?? '').toString();
+    _tendanceDepenses = _nullIfEmpty(data['impact_peche_tendanceDepenses']);
+    _variationDepensesCtrl.text =
+        (data['impact_peche_variationDepenses'] ?? '').toString();
 
     _waveController = AnimationController(
       vsync: this,
@@ -273,38 +216,48 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
     )..repeat();
   }
 
+  static String? _nullIfEmpty(dynamic v) {
+    final s = (v ?? '').toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   @override
   void dispose() {
-    _typeEnginAutreCtrl.dispose();
-    _nbPiecesCtrl.dispose();
-    _idNavireCtrl.dispose();
-    _idNasseCtrl.dispose();
-    _debutCtrl.dispose();
-    _finCtrl.dispose();
-    for (final ctrl in _dynamicCtrls.values) {
-      ctrl.dispose();
-    }
+    _enginPlusImpacteCtrl.dispose();
+    _degatsPhysiquePecheurDescriptionCtrl.dispose();
+    _augmentationChargeDescriptionCtrl.dispose();
+    _evolutionCapturesTendanceAnneesClesCtrl.dispose();
+    _evolutionCapturesDepuisQuandCtrl.dispose();
+    _especeDominante1Ctrl.dispose();
+    _especeDominante2Ctrl.dispose();
+    _especeDominante3Ctrl.dispose();
+    _evolutionTailleTendanceAnneesClesCtrl.dispose();
+    _evolutionTailleDepuisQuandCtrl.dispose();
+    _evolutionTailleZonePlusAffecteeCtrl.dispose();
+    _especeAffectee1.dispose();
+    _especeAffectee2.dispose();
+    _especeAffectee3.dispose();
+    _tendanceValeurAnneesClesCtrl.dispose();
+    _prixVenteConsommateurCtrl.dispose();
+    _prixIndustrieCtrl.dispose();
+    _prixIntermediaireCtrl.dispose();
+    _variationChiffreAffaireCtrl.dispose();
+    _variationDepensesCtrl.dispose();
     _waveController.dispose();
     super.dispose();
   }
 
-  _EnginOption? _findEnginOption(String label, String code) {
-    for (final option in _enginOptions) {
-      if (label.isNotEmpty && option.label == label) return option;
-      if (code.isNotEmpty && option.code == code) return option;
-    }
-    return null;
+  void _save(String key, String value) {
+    data[key] = value;
+    _service.scheduleFullDataSave(widget.formId, data);
   }
 
-  String? _safeOption(dynamic raw, List<String> options) {
-    final value = (raw ?? '').toString().trim();
-    if (value.isEmpty) return null;
-    return options.contains(value) ? value : null;
-  }
-
-  InputDecoration _dec(String label, {Widget? suffixIcon}) => InputDecoration(
+  InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
     labelText: label,
     hintText: 'Saisir ici...',
+    helperText: helperText,
+    helperMaxLines: 2,
+    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
     hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
     floatingLabelBehavior: FloatingLabelBehavior.auto,
     floatingLabelAlignment: FloatingLabelAlignment.start,
@@ -316,7 +269,6 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
       color: Color(0xFF1E3A8A),
       fontWeight: FontWeight.w700,
     ),
-    suffixIcon: suffixIcon,
     filled: true,
     fillColor: const Color(0xFFF8FBFF),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -334,156 +286,241 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
     ),
   );
 
-  Future<void> _pickTime24h(TextEditingController ctrl, String key) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-    );
-    if (picked != null) {
-      final hh = picked.hour.toString().padLeft(2, '0');
-      final mm = picked.minute.toString().padLeft(2, '0');
-      final txt = '$hh:$mm';
-      setState(() => ctrl.text = txt);
-      data[key] = txt;
-      _service.scheduleFullDataSave(widget.formId, data);
-    }
-  }
-
-  void _onTypeEnginChanged(_EnginOption? option) {
-    setState(() => _selectedEnginOption = option);
-    if (option == null) {
-      data.remove('suivi_typeEngin');
-      data.remove('suivi_typeEnginCode');
-    } else {
-      data['suivi_typeEngin'] = option.label;
-      data['suivi_typeEnginCode'] = option.code;
-    }
-    _clearInactiveConditionalData();
-    if (option == null || option.code != 'AUTRE') {
-      _typeEnginAutreCtrl.clear();
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.scheduleFullDataSave(widget.formId, data);
-  }
-
-  void _clearInactiveConditionalData() {
-    final activeGroup = _selectedEnginOption?.group;
-    for (final entry in _conditionalFields.entries) {
-      if (entry.key == activeGroup) continue;
-      for (final def in entry.value) {
-        data.remove(def.key);
-        _dynamicCtrls[def.key]?.clear();
-      }
-    }
-    for (final key in _legacyConditionalKeys) {
-      data.remove(key);
-    }
-  }
-
-  Widget _field({
+  Widget _textField({
     required TextEditingController controller,
     required String label,
-    required String key,
+    required String dataKey,
+    String? helperText,
     bool numeric = false,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: readOnly,
-      onTap: onTap,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      decoration: _dec(label, suffixIcon: suffixIcon),
+      decoration: _dec(label, helperText: helperText),
+      onChanged: (v) => _save(dataKey, v),
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required List<_OptionItem> options,
+    required String? value,
+    required String dataKey,
+    required ValueChanged<String?> onChanged,
+    String? helperText,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: _dec(label, helperText: helperText),
+      hint: const Text('Choisir...'),
+      items: options
+          .map(
+            (o) => DropdownMenuItem<String>(
+              value: o.code,
+              child: Text(o.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
       onChanged: (v) {
-        data[key] = v;
-        _service.scheduleFullDataSave(widget.formId, data);
+        onChanged(v);
+        _save(dataKey, v ?? '');
       },
     );
   }
 
-  Widget _buildConditionalSection() {
-    final group = _selectedEnginOption?.group;
-    if (group == null) return const SizedBox.shrink();
-    final defs = _conditionalFields[group];
-    if (defs == null || defs.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Détails type d'engin",
-            style: TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-            ),
+  // ---- Header bars matching the dark / gray rows of the Excel sheet.
+
+  Widget _sectionHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 4, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF52565C),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 15,
+        ),
+      ),
+    );
+  }
+
+  Widget _subHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFC7CACF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _lightSubHeader(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE6E7EA),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _plainLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _gap() => const SizedBox(height: 12);
+
+  Widget _signDot({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? const Color(0xFF1E3A8A) : Colors.white,
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF1E3A8A)
+                : const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+            width: 1.5,
           ),
         ),
-        const SizedBox(height: 12),
-        ...List.generate(defs.length, (index) {
-          final def = defs[index];
-          final widget = _field(
-            controller: _dynamicCtrls[def.key]!,
-            label: def.label,
-            key: def.key,
-            numeric: def.numeric,
-          );
-          if (index == defs.length - 1) return widget;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: widget,
-          );
-        }),
-      ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// "Nom (+/-)" field: a name plus an optional qualifying sign.
+  Widget _nomSignField({
+    required String label,
+    required String nomKey,
+    required String signKey,
+    required _NomSignValue value,
+    String? helperText,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF1E3A8A),
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+          if (helperText != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              helperText,
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: value.nomCtrl,
+            decoration: _dec('Nom').copyWith(
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            onChanged: (v) => _save(nomKey, v),
+          ),
+          const SizedBox(height: 10),
+          /*Row(
+            children: [
+              _signDot(
+                label: '+',
+                selected: value.sign == '+',
+                onTap: () => setState(() {
+                  value.sign = value.sign == '+' ? null : '+';
+                  _save(signKey, value.sign ?? '');
+                }),
+              ),
+              const SizedBox(width: 8),
+              _signDot(
+                label: '-',
+                selected: value.sign == '-',
+                onTap: () => setState(() {
+                  value.sign = value.sign == '-' ? null : '-';
+                  _save(signKey, value.sign ?? '');
+                }),
+              ),
+            ],
+          ),*/
+        ],
+      ),
     );
   }
 
   void _goNext() {
-    if (_selectedTypeObservation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Veuillez choisir un type d'observation."),
-        ),
-      );
-      return;
-    }
-    if (_selectedEnginOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez choisir un type d'engin.")),
-      );
-      return;
-    }
-    if (_selectedEnginOption!.code == 'AUTRE' &&
-        _typeEnginAutreCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez préciser le type d'engin.")),
-      );
-      return;
-    }
-    data['suivi_typeObservation'] = _selectedTypeObservation!;
-    data['suivi_typeEngin'] = _selectedEnginOption!.label;
-    data['suivi_typeEnginCode'] = _selectedEnginOption!.code;
-    if (_selectedEnginOption!.code == 'AUTRE') {
-      data['suivi_typeEnginAutre'] = _typeEnginAutreCtrl.text.trim();
-    } else {
-      data.remove('suivi_typeEnginAutre');
-    }
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+    _service.updateFormData(widget.formId, data, stepCompleted: 4);
     Navigator.push(
-      context,
+      context, 
       MaterialPageRoute(
         builder: (_) => AdaptationLocalePage(formId: widget.formId, data: data),
-      ),
-    );
+    ));
+    
   }
 
   void _goToLekHome() {
@@ -540,7 +577,7 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                       ),
                       const SizedBox(width: 4),
                       const Text(
-                        'Suivi',
+                        'Impact sur la pêche',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -549,7 +586,7 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                       ),
                       const Spacer(),
                       Text(
-                        'Étape 2/5',
+                        'Étape 6/9',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
@@ -563,116 +600,318 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
+                      // ---- Dégâts / gêne générale
                       _sectionCard(
                         children: [
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedTypeObservation,
-                            isExpanded: true,
-                            decoration: _dec("Type d'observation"),
-                            hint: const Text('Choisir...'),
-                            items: _typeObservationOptions
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(
-                                      item,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _selectedTypeObservation = value);
-                              if (value == null) {
-                                data.remove('suivi_typeObservation');
-                              } else {
-                                data['suivi_typeObservation'] = value;
-                              }
-                              _service.scheduleFullDataSave(
-                                widget.formId,
-                                data,
-                              );
-                            },
+                          _dropdownField(
+                            label: 'Dégâts sur les engins',
+                            options: _frequenceOptions,
+                            value: _degatsEngins,
+                            dataKey: 'impact_peche_degatsEngins',
+                            onChanged: (v) => setState(() => _degatsEngins = v),
+                            helperText: 'Jamais / Rarement / Souvent',
                           ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<_EnginOption>(
-                            initialValue: _selectedEnginOption,
-                            isExpanded: true,
-                            decoration: _dec("Type d'engin"),
-                            hint: const Text('Choisir...'),
-                            items: _enginOptions
-                                .map(
-                                  (option) => DropdownMenuItem<_EnginOption>(
-                                    value: option,
-                                    child: Text(
-                                      option.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: _onTypeEnginChanged,
+                          _gap(),
+                          _textField(
+                            controller: _enginPlusImpacteCtrl,
+                            label: 'Engin le plus impacté',
+                            dataKey: 'impact_peche_enginPlusImpacte',
                           ),
-                          if (_selectedEnginOption?.code == 'AUTRE') ...[
-                            const SizedBox(height: 12),
-                            _field(
-                              controller: _typeEnginAutreCtrl,
-                              label: 'Préciser',
-                              key: 'suivi_typeEnginAutre',
+                          _gap(),
+                          _dropdownField(
+                            label: 'Dégâts physique sur le pêcheur',
+                            options: _ouiNonOptions,
+                            value: _degatsPhysiquePecheurOuiNon,
+                            dataKey: 'impact_peche_degatsPhysiquePecheur_ouiNon',
+                            onChanged: (v) => setState(
+                                () => _degatsPhysiquePecheurOuiNon = v),
+                            helperText: 'oui / non - si oui, décrire',
+                          ),
+                          if (_degatsPhysiquePecheurOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _degatsPhysiquePecheurDescriptionCtrl,
+                              label: 'Décrire',
+                              dataKey: 'impact_peche_degatsPhysiquePecheur_description',
                             ),
                           ],
-                          if (_selectedEnginOption != null) ...[
-                            const SizedBox(height: 12),
-                            _buildConditionalSection(),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Augmentation de la charge de travail',
+                            options: _ouiNonOptions,
+                            value: _augmentationChargeOuiNon,
+                            dataKey: 'impact_peche_augmentationCharge_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _augmentationChargeOuiNon = v),
+                            helperText: 'oui / non - si oui, décrire',
+                          ),
+                          if (_augmentationChargeOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _augmentationChargeDescriptionCtrl,
+                              label: 'Décrire',
+                              dataKey: 'impact_peche_augmentationCharge_description',
+                            ),
                           ],
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _nbPiecesCtrl,
-                            label: 'Nombre de pièces (nasse/filet)',
-                            key: 'suivi_nbPieces',
+                          _gap(),
+                          _dropdownField(
+                            label: 'Dégâts physique sur les captures',
+                            options: _ouiNonOptions,
+                            value: _degatsPhysiqueCapturesOuiNon,
+                            dataKey: 'impact_peche_degatsPhysiqueCaptures_ouiNon',
+                            onChanged: (v) => setState(
+                                () => _degatsPhysiqueCapturesOuiNon = v),
+                            helperText: 'oui / non',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // ---- Evolutions des captures totales
+                      _sectionCard(
+                        children: [
+                          _subHeader('Evolutions des captures totales'),
+                          _dropdownField(
+                            label: 'Evolutions des captures totales',
+                            options: _ouiNonOptions,
+                            value: _evolutionCapturesOuiNon,
+                            dataKey: 'impact_peche_evolutionCapturesTotales_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _evolutionCapturesOuiNon = v),
+                            helperText: 'oui / non',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Tendance',
+                            options: _tendanceCompleteOptions,
+                            value: _evolutionCapturesTendance,
+                            dataKey: 'impact_peche_evolutionCapturesTotales_tendance',
+                            onChanged: (v) =>
+                                setState(() => _evolutionCapturesTendance = v),
+                            helperText: 'Aug / Dim / St / Var (année clés)',
+                          ),
+                          if (_evolutionCapturesTendance == 'Var') ...[
+                            _gap(),
+                            _textField(
+                              controller:
+                                  _evolutionCapturesTendanceAnneesClesCtrl,
+                              label: 'Année(s) clé(s)',
+                              dataKey:
+                                  'impact_peche_evolutionCapturesTotales_tendanceAnneesCles',
+                            ),
+                          ],
+                          _gap(),
+                          _textField(
+                            controller: _evolutionCapturesDepuisQuandCtrl,
+                            label: 'Depuis quand',
+                            dataKey:
+                                'impact_peche_evolutionCapturesTotales_depuisQuand',
+                          ),
+                          _plainLabel('Espèces dominantes'),
+                          _textField(
+                            controller: _especeDominante1Ctrl,
+                            label: 'Espèce 1',
+                            dataKey: 'impact_peche_evolutionCapturesTotales_espece1',
+                            helperText: 'Nom / carte (initiale Sp)',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _especeDominante2Ctrl,
+                            label: 'Espèce 2',
+                            dataKey: 'impact_peche_evolutionCapturesTotales_espece2',
+                            helperText: 'Nom / carte (initiale Sp)',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _especeDominante3Ctrl,
+                            label: 'Espèce 3',
+                            dataKey: 'impact_peche_evolutionCapturesTotales_espece3',
+                            helperText: 'Nom / carte (initiale Sp)',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // ---- Evolution de la catégorie de taille des espèces
+                      _sectionCard(
+                        children: [
+                          _subHeader(
+                              'Evolution de la catégorie de taille des espèces capturées'),
+                          _dropdownField(
+                            label:
+                                'Evolution de la catégorie de taille des espèces capturées',
+                            options: _ouiNonOptions,
+                            value: _evolutionTailleOuiNon,
+                            dataKey: 'impact_peche_evolutionTailleEspeces_ouiNon',
+                            onChanged: (v) =>
+                                setState(() => _evolutionTailleOuiNon = v),
+                            helperText: 'oui / non',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Tendance',
+                            options: _tendanceCompleteOptions,
+                            value: _evolutionTailleTendance,
+                            dataKey: 'impact_peche_evolutionTailleEspeces_tendance',
+                            onChanged: (v) =>
+                                setState(() => _evolutionTailleTendance = v),
+                            helperText: 'Aug / Dim / St / Var (année clés)',
+                          ),
+                          if (_evolutionTailleTendance == 'Var') ...[
+                            _gap(),
+                            _textField(
+                              controller: _evolutionTailleTendanceAnneesClesCtrl,
+                              label: 'Année(s) clé(s)',
+                              dataKey:
+                                  'impact_peche_evolutionTailleEspeces_tendanceAnneesCles',
+                            ),
+                          ],
+                          _gap(),
+                          _textField(
+                            controller: _evolutionTailleDepuisQuandCtrl,
+                            label: 'Depuis quand',
+                            dataKey: 'impact_peche_evolutionTailleEspeces_depuisQuand',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _evolutionTailleZonePlusAffecteeCtrl,
+                            label: 'Nom de la zone la plus affectée',
+                            dataKey:
+                                'impact_peche_evolutionTailleEspeces_zonePlusAffectee',
+                          ),
+                          _plainLabel('Espèces les plus affectées'),
+                          _nomSignField(
+                            label: 'Espèce 1',
+                            nomKey:
+                                'impact_peche_evolutionTailleEspeces_espece1_nom',
+                            signKey:
+                                'impact_peche_evolutionTailleEspeces_espece1_signe',
+                            value: _especeAffectee1,
+                            helperText: 'Nom (+/-)',
+                          ),
+                          _gap(),
+                          _nomSignField(
+                            label: 'Espèce 2',
+                            nomKey:
+                                'impact_peche_evolutionTailleEspeces_espece2_nom',
+                            signKey:
+                                'impact_peche_evolutionTailleEspeces_espece2_signe',
+                            value: _especeAffectee2,
+                            helperText: 'Nom (+/-)',
+                          ),
+                          _gap(),
+                          _nomSignField(
+                            label: 'Espèce 3',
+                            nomKey:
+                                'impact_peche_evolutionTailleEspeces_espece3_nom',
+                            signKey:
+                                'impact_peche_evolutionTailleEspeces_espece3_signe',
+                            value: _especeAffectee3,
+                            helperText: 'Nom (+/-)',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // ---- Impact sur la rentabilité du pêcheur
+                      _sectionCard(
+                        children: [
+                          _sectionHeader(
+                              'Impact sur la rentabilité du pêcheur durant les cinq dernières années'),
+                          _dropdownField(
+                            label:
+                                'Acceptation du crabe pour la commercialisation',
+                            options: _acceptationOptions,
+                            value: _acceptationCrabe,
+                            dataKey: 'impact_peche_acceptationCrabe',
+                            onChanged: (v) =>
+                                setState(() => _acceptationCrabe = v),
+                            helperText: 'Non / ± / Bonne',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Tendance de la valeur',
+                            options: _tendanceCompleteOptions,
+                            value: _tendanceValeur,
+                            dataKey: 'impact_peche_tendanceValeur',
+                            onChanged: (v) =>
+                                setState(() => _tendanceValeur = v),
+                            helperText: 'Aug / Dim / St / Var (année clés)',
+                          ),
+                          if (_tendanceValeur == 'Var') ...[
+                            _gap(),
+                            _textField(
+                              controller: _tendanceValeurAnneesClesCtrl,
+                              label: 'Année(s) clé(s)',
+                              dataKey: 'impact_peche_tendanceValeurAnneesCles',
+                            ),
+                          ],
+                          _lightSubHeader('Prix de vente actuel'),
+                          _textField(
+                            controller: _prixVenteConsommateurCtrl,
+                            label: 'Prix vente consommateur',
+                            dataKey: 'impact_peche_prixVenteConsommateur',
+                            helperText: 'Valeur en DT',
                             numeric: true,
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNavireCtrl,
-                            label: 'ID du navire (Nom & Immatriculation)',
-                            key: 'suivi_idNavire',
-                          ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _idNasseCtrl,
-                            label: 'ID de la nasse',
-                            key: 'suivi_idNasse',
+                          _gap(),
+                          _textField(
+                            controller: _prixIndustrieCtrl,
+                            label: 'Prix industrie',
+                            dataKey: 'impact_peche_prixIndustrie',
+                            helperText: 'Valeur en DT',
                             numeric: true,
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _debutCtrl,
-                            label: 'Opération de pêche - Début (24h)',
-                            key: 'suivi_debut',
-                            readOnly: true,
-                            onTap: () =>
-                                _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_debutCtrl, 'suivi_debut'),
-                            ),
+                          _gap(),
+                          _textField(
+                            controller: _prixIntermediaireCtrl,
+                            label: 'Prix intermédiaire (mareyeurs)',
+                            dataKey: 'impact_peche_prixIntermediaireMareyeurs',
+                            helperText: 'Valeur en DT',
+                            numeric: true,
                           ),
-                          const SizedBox(height: 12),
-                          _field(
-                            controller: _finCtrl,
-                            label: 'Opération de pêche - Fin (24h)',
-                            key: 'suivi_fin',
-                            readOnly: true,
-                            onTap: () => _pickTime24h(_finCtrl, 'suivi_fin'),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.access_time),
-                              onPressed: () =>
-                                  _pickTime24h(_finCtrl, 'suivi_fin'),
-                            ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Tendance de votre rentabilité',
+                            options: _tendanceSimpleOptions,
+                            value: _tendanceRentabilite,
+                            dataKey: 'impact_peche_tendanceRentabilite',
+                            onChanged: (v) =>
+                                setState(() => _tendanceRentabilite = v),
+                            helperText: 'Aug / Dim / St',
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: "Tendance chiffre d'affaire",
+                            options: _tendanceSimpleOptions,
+                            value: _tendanceChiffreAffaire,
+                            dataKey: 'impact_peche_tendanceChiffreAffaire',
+                            onChanged: (v) =>
+                                setState(() => _tendanceChiffreAffaire = v),
+                            helperText: 'Aug / Dim / St',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _variationChiffreAffaireCtrl,
+                            label: "% variation chiffre d'affaire",
+                            dataKey: 'impact_peche_variationChiffreAffaire',
+                            helperText: 'Valeur en %',
+                            numeric: true,
+                          ),
+                          _gap(),
+                          _dropdownField(
+                            label: 'Tendance des dépenses',
+                            options: _tendanceSimpleOptions,
+                            value: _tendanceDepenses,
+                            dataKey: 'impact_peche_tendanceDepenses',
+                            onChanged: (v) =>
+                                setState(() => _tendanceDepenses = v),
+                            helperText: 'Aug / Dim / St',
+                          ),
+                          _gap(),
+                          _textField(
+                            controller: _variationDepensesCtrl,
+                            label: '% variations des dépenses',
+                            dataKey: 'impact_peche_variationDepenses',
+                            helperText: 'Valeur en %',
+                            numeric: true,
                           ),
                         ],
                       ),
@@ -683,7 +922,14 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () {
+                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+                                    Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => ImpactEcologiquePage(formId: widget.formId, data:data),
+                                      ),
+                                   );}
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -725,29 +971,9 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
-}
-
-class _EnginOption {
-  final String label;
-  final String code;
-  final String group;
-
-  const _EnginOption({
-    required this.label,
-    required this.code,
-    required this.group,
-  });
-}
-
-class _ConditionalFieldDef {
-  final String key;
-  final String label;
-  final bool numeric;
-
-  const _ConditionalFieldDef(this.key, this.label, {this.numeric = false});
 }
 
 class _PrimaryGradientButton extends StatelessWidget {

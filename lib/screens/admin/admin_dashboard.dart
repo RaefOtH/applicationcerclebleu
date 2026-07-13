@@ -118,6 +118,15 @@ class _AdminDashboardState extends State<AdminDashboard>
     return '$day $dd/$mm/$yyyy - $hh:$min';
   }
 
+  void _openSmartReportChat(BuildContext context, DashboardStatsResult? stats) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _SmartReportChatBot(stats: stats),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fullName = (widget.user?.fullName ?? '').trim();
@@ -409,6 +418,33 @@ class _AdminDashboardState extends State<AdminDashboard>
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: 10),
+                                    FilledButton.icon(
+                                      onPressed: () => _openSmartReportChat(
+                                        context,
+                                        stats,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.auto_awesome_rounded,
+                                      ),
+                                      label: const Text('Smart report'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF00D9D9,
+                                        ),
+                                        foregroundColor: const Color(
+                                          0xFF1E3A8A,
+                                        ),
+                                        textStyle: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -443,7 +479,8 @@ class _AdminDashboardState extends State<AdminDashboard>
                                 const SizedBox(height: 14),
                                 if (stats == null ||
                                     (stats.totalTerrain == 0 &&
-                                        stats.totalLabo == 0))
+                                        stats.totalLabo == 0 &&
+                                        stats.totalLek == 0))
                                   _EmptyCard(
                                     text:
                                         'Aucune donnée trouvée pour les filtres sélectionnés.',
@@ -452,6 +489,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   _SummaryCard(
                                     totalTerrain: stats.totalTerrain,
                                     totalLabo: stats.totalLabo,
+                                    totalLek: stats.totalLek,
                                   ),
                                   const SizedBox(height: 10),
                                   _StatsCard(
@@ -534,7 +572,9 @@ class _AdminFilterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,7 +661,6 @@ class _AdminFilterCard extends StatelessWidget {
   }
 }
 
-//CreationSection*
 class _CreateSection extends StatelessWidget {
   const _CreateSection();
 
@@ -752,7 +791,9 @@ class _ActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
+          border: Border.all(
+            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+          ),
         ),
         child: Row(
           children: [
@@ -801,8 +842,13 @@ class _ActionCard extends StatelessWidget {
 class _SummaryCard extends StatelessWidget {
   final int totalTerrain;
   final int totalLabo;
+  final int totalLek;
 
-  const _SummaryCard({required this.totalTerrain, required this.totalLabo});
+  const _SummaryCard({
+    required this.totalTerrain,
+    required this.totalLabo,
+    required this.totalLek,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -812,7 +858,9 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,9 +886,17 @@ class _SummaryCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _SmallMetric(
-                  label: 'Laboratoire',
+                  label: 'Lab',
                   value: totalLabo.toString(),
                   icon: Icons.science_outlined,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _SmallMetric(
+                  label: 'LEK',
+                  value: totalLek.toString(),
+                  icon: Icons.bar_chart,
                 ),
               ),
             ],
@@ -880,10 +936,7 @@ class _SmallMetric extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF475569),
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
                 ),
                 Text(
                   value,
@@ -921,7 +974,9 @@ class _StatsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+        ),
       ),
       child: Row(
         children: [
@@ -972,7 +1027,9 @@ class _TopListCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E3A8A).withValues(alpha: 0.08)),
+        border: Border.all(
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1028,6 +1085,287 @@ class _EmptyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(text),
+    );
+  }
+}
+
+/// Fenêtre de Chat intelligente et gratuite pour la génération de rapports personnalisés.
+class _SmartReportChatBot extends StatefulWidget {
+  final DashboardStatsResult? stats;
+
+  const _SmartReportChatBot({this.stats});
+
+  @override
+  State<_SmartReportChatBot> createState() => _SmartReportChatBotState();
+}
+
+class _SmartReportChatBotState extends State<_SmartReportChatBot> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<Map<String, dynamic>> _messages = [];
+  bool _isTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messages.add({
+      'isUser': false,
+      'text':
+          "Bonjour ! Je suis votre assistant Smart Report Cercle Bleu. 🦀\n"
+          "Je peux analyser instantanément vos données d'enquêtes actuelles (Terrain, Labo, LEK et Chercheurs) pour rédiger un rapport personnalisé sans frais.\n\n"
+          "Que souhaitez-vous synthétiser aujourd'hui ?",
+    });
+  }
+
+  void _handleSendMessage(String text) {
+    if (text.trim().isEmpty) return;
+    _messageController.clear();
+
+    setState(() {
+      _messages.add({'isUser': true, 'text': text});
+      _isTyping = true;
+    });
+
+    Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      final reply = _generateIntelligenceReport(text.toLowerCase());
+      setState(() {
+        _messages.add({'isUser': false, 'text': reply});
+        _isTyping = false;
+      });
+    });
+  }
+
+  String _generateIntelligenceReport(String input) {
+    final s = widget.stats;
+    if (s == null) {
+      return "Aucune donnée statistique n'est chargée actuellement. Veuillez actualiser le dashboard.";
+    }
+
+    final totalEnquetes = s.totalTerrain + s.totalLabo + s.totalLek;
+
+    if (input.contains('global') || input.contains('synthèse') || input.contains('tout')) {
+      return "📊 **RAPPORT ANALYTIQUE GLOBAL - CERCLE BLEU**\n\n"
+          "• **Volume total d'activités** : $totalEnquetes formulaires enregistrés.\n"
+          "• **Répartition des Enquêtes** :\n"
+          "  - Données Terrain : ${s.totalTerrain} saisies\n"
+          "  - Données Labo : ${s.totalLabo} analyses\n"
+          "  - Questionnaires LEK : ${s.totalLek} sessions\n\n"
+          "• **Indicateurs clés** : Un ensemble de ${s.totalPortsUniques} ports uniques ont été échantillonnés, totalisant un prélèvement ou observation de ${s.totalCrabes} crabes.\n\n"
+          "💡 *Analyse objective* : Le focus d'effort actuel est majoritairement orienté vers le volet ${s.totalTerrain >= s.totalLabo ? 'Terrain' : 'Laboratoire'}.";
+    } else if (input.contains('terrain') || input.contains('port') || input.contains('crabe')) {
+      String portsStr = s.topPorts.map((e) => "- ${e.label} (${e.value})").join("\n");
+      return "🗺️ **RAPPORT FOCUS : DONNÉES TERRAIN & PORTS**\n\n"
+          "• **Saisies géographiques** : ${s.totalTerrain} formulaires complétés sur le terrain.\n"
+          "• **Diversité spatiale** : Échantillonnage étalé sur ${s.totalPortsUniques} ports de pêche.\n"
+          "• **Volume de captures** : ${s.totalCrabes} spécimens enregistrés au total.\n\n"
+          "📌 **Top Ports actifs** :\n${portsStr.isNotEmpty ? portsStr : 'Aucune donnée portuaire détaillée.'}";
+    } else if (input.contains('labo') || input.contains('laboratoire') || input.contains('espèce')) {
+      String espStr = s.topEspeces.map((e) => "- ${e.label} (${e.value})").join("\n");
+      return "🔬 **RAPPORT FOCUS : DONNÉES LABORATOIRE**\n\n"
+          "• **Analyses biologiques** : ${s.totalLabo} échantillons traités en laboratoire.\n\n"
+          "📌 **Distribution des principales Espèces analysées** :\n${espStr.isNotEmpty ? espStr : 'Aucune espèce listée.'}\n\n"
+          "💡 *Recommandation* : Croiser ces résultats morphométriques avec le calendrier des marées du LEK pour valider les pics de ponte.";
+    } else if (input.contains('lek') || input.contains('questionnaire')) {
+      return "💬 **RAPPORT FOCUS : TRADITIONS & CONNAISSANCES (LEK)**\n\n"
+          "• **Enquêtes de connaissances écologiques locales (LEK)** : ${s.totalLek} questionnaires soumis auprès des communautés de pêcheurs.\n\n"
+          "💡 *Analyse qualitative* : Ces données permettent de corréler l'historique de l'invasion du crabe bleu avec les variations quantitatives observées sur le terrain (${s.totalTerrain} observations récurrentes).";
+    } else if (input.contains('chercheur')) {
+      return "👥 **RAPPORT DES ACTIVITÉS CHERCHEURS**\n\n"
+          "• Les options de filtrage incluent un panel de ${(s.ownerOptions).length} chercheurs actifs enregistrés sur cette période.\n"
+          "• La couverture d'analyse montre une répartition dynamique sur les ${s.totalPortsUniques} ports référencés.\n\n"
+          "Pour auditer un chercheur spécifique, sélectionnez son nom dans les filtres de la page principale pour recalculer le rapport d'activité.";
+    } else {
+      return "Je comprends votre intérêt pour nos données. Voici ce que je peux générer précisément avec les filtres actuels :\n"
+          "- Tapez **'global'** pour un rapport de synthèse général.\n"
+          "- Tapez **'terrain'** pour analyser les ports et les crabes capturés.\n"
+          "- Tapez **'labo'** pour voir la distribution des espèces en laboratoire.\n"
+          "- Tapez **'lek'** pour le suivi des questionnaires pêcheurs.";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.82,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 66,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E3A8A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00D9D9)),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Smart Report Assistant',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Rapports d\'enquêtes instantanés • Gratuit',
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                final isUser = msg['isUser'] == true;
+                return Align(
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isUser ? const Color(0xFF1E3A8A) : Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isUser ? 16 : 4),
+                        bottomRight: Radius.circular(isUser ? 4 : 16),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      msg['text'],
+                      style: TextStyle(
+                        color: isUser ? Colors.white : const Color(0xFF1E3A8A),
+                        fontSize: 14.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (_isTyping)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF00D9D9),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                _buildQuickChip("📋 Rapport Global"),
+                _buildQuickChip("🗺️ Focus Terrain & Ports"),
+                _buildQuickChip("🔬 Analyses Labo"),
+                _buildQuickChip("💬 Synthèse LEK"),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              14,
+              8,
+              14,
+              MediaQuery.of(context).viewInsets.bottom + 14,
+            ),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    onSubmitted: _handleSendMessage,
+                    decoration: InputDecoration(
+                      hintText: "Demander un rapport personnalisé...",
+                      hintStyle: const TextStyle(fontSize: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _handleSendMessage(_messageController.text),
+                  icon: const Icon(
+                    Icons.send_rounded,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickChip(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: ActionChip(
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: const Color(0xFF00D9D9).withValues(alpha: 0.15),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        onPressed: () => _handleSendMessage(label),
+      ),
     );
   }
 }
