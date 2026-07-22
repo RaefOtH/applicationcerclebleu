@@ -1,4 +1,4 @@
-name: applicationstagepfe
+name: applicationenquete
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -34,6 +34,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:  
+  file_picker: ^8.0.0
   ota_update: 7.1.0 # Vérifiez la dernière version stable
   firebase_remote_config: ^6.5.3
   package_info_plus: ^8.0.0 # Pour lire la version locale de l'app
@@ -99,6 +100,11 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/image/logo_app_icon.png"
   adaptive_icon_foreground_inset: 8
+
+  windows:
+    generate: true
+    image_path: "assets/image/logo_app_icon.png"
+    icon_size: 256
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

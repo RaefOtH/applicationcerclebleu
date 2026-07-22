@@ -272,6 +272,23 @@ class CsvExportService {
       );
     }
 
+    // UPDATED FOR WINDOWS DESKTOP
+    if (Platform.isWindows) {
+      final downloads = await getDownloadsDirectory();
+      final baseDir = downloads ?? await getApplicationDocumentsDirectory();
+      final folder = Directory('${baseDir.path}/Cercle Bleu');
+      if (!await folder.exists()) {
+        await folder.create(recursive: true);
+      }
+      final file = File('${folder.path}/$fileName');
+      await file.writeAsBytes(bytes, flush: true);
+      return CsvSaveResult(
+        fileName: fileName,
+        savedLocation: file.path,
+        shareableFile: file,
+      );
+    }
+
     final docs = await getApplicationDocumentsDirectory();
     final file = File('${docs.path}/$fileName');
     await file.writeAsBytes(bytes, flush: true);

@@ -2,38 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
-import 'lek_home.dart';
-// TODO: replace with the actual next page of your flow if different.
 import 'dynamique_du_crabe_page.dart';
 import 'impact_sur_la_peche_page.dart';
+import 'lek_home.dart';
 
-/// Simple code/label pair used by the dropdowns of this page.
 class _OptionItem {
   final String code;
   final String label;
   const _OptionItem(this.code, this.label);
-}
-
-/// A 1-5 evaluation level with an optional sign (+ / -), e.g. "3+", "2-", "4".
-class _ScoreValue {
-  int? score; // 1..5
-  String? sign; // '+' | '-' | null
-
-  _ScoreValue({this.score, this.sign});
-
-  String toStorageString() {
-    if (score == null) return '';
-    return '$score${sign ?? ''}';
-  }
-
-  static _ScoreValue fromStorageString(dynamic raw) {
-    final s = (raw ?? '').toString().trim();
-    if (s.isEmpty) return _ScoreValue();
-    final signChar = s.endsWith('+') || s.endsWith('-') ? s.substring(s.length - 1) : null;
-    final numPart = signChar != null ? s.substring(0, s.length - 1) : s;
-    final n = int.tryParse(numPart);
-    return _ScoreValue(score: n, sign: signChar);
-  }
 }
 
 class ImpactEcologiquePage extends StatefulWidget {
@@ -67,15 +43,13 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
   final LekFormService _service = LekFormService();
   late AnimationController _waveController;
 
-  // ---- impact sur les habitats
   String? _habitatsOuiNon;
-  final _ScoreValue _herbiersDisparaissent = _ScoreValue();
-  final _ScoreValue _fondSeCreuse = _ScoreValue();
-  final _ScoreValue _retourneLeFond = _ScoreValue();
+  int? _herbiersDisparaissent;
+  int? _fondSeCreuse;
+  int? _retourneLeFond;
   final TextEditingController _autreTexteCtrl = TextEditingController();
-  final _ScoreValue _autreScore = _ScoreValue();
+  int? _autreScore;
 
-  // ---- impact sur la biodiversité
   String? _biodiversiteOuiNon;
   String? _tendance;
   final TextEditingController _tendanceAnneesClesCtrl = TextEditingController();
@@ -83,11 +57,11 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
   final TextEditingController _zonePlusAffecteeCtrl = TextEditingController();
 
   final TextEditingController _espece1NomCtrl = TextEditingController();
-  final _ScoreValue _espece1Score = _ScoreValue();
+  int? _espece1Score;
   final TextEditingController _espece2NomCtrl = TextEditingController();
-  final _ScoreValue _espece2Score = _ScoreValue();
+  int? _espece2Score;
   final TextEditingController _espece3NomCtrl = TextEditingController();
-  final _ScoreValue _espece3Score = _ScoreValue();
+  int? _espece3Score;
 
   @override
   void initState() {
@@ -95,15 +69,11 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     data = widget.data;
 
     _habitatsOuiNon = _nullIfEmpty(data['impact_ecologique_habitats_ouiNon']);
-    _herbiersDisparaissentAssign(_ScoreValue.fromStorageString(
-        data['impact_ecologique_habitats_herbiersDisparaissent']));
-    _fondSeCreuseAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_fondSeCreuse']));
-    _retourneLeFondAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_retourneLeFond']));
+    _herbiersDisparaissent = int.tryParse((data['impact_ecologique_habitats_herbiersDisparaissent'] ?? '').toString());
+    _fondSeCreuse = int.tryParse((data['impact_ecologique_habitats_fondSeCreuse'] ?? '').toString());
+    _retourneLeFond = int.tryParse((data['impact_ecologique_habitats_retourneLeFond'] ?? '').toString());
     _autreTexteCtrl.text = (data['impact_ecologique_habitats_autreTexte'] ?? '').toString();
-    _autreScoreAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_habitats_autreScore']));
+    _autreScore = int.tryParse((data['impact_ecologique_habitats_autreScore'] ?? '').toString());
 
     _biodiversiteOuiNon = _nullIfEmpty(data['impact_ecologique_biodiversite_ouiNon']);
     _tendance = _nullIfEmpty(data['impact_ecologique_biodiversite_tendance']);
@@ -114,56 +84,16 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
         (data['impact_ecologique_biodiversite_zonePlusAffectee'] ?? '').toString();
 
     _espece1NomCtrl.text = (data['impact_ecologique_biodiversite_espece1_nom'] ?? '').toString();
-    _espece1ScoreAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece1_score']));
+    _espece1Score = int.tryParse((data['impact_ecologique_biodiversite_espece1_score'] ?? '').toString());
     _espece2NomCtrl.text = (data['impact_ecologique_biodiversite_espece2_nom'] ?? '').toString();
-    _espece2ScoreAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece2_score']));
+    _espece2Score = int.tryParse((data['impact_ecologique_biodiversite_espece2_score'] ?? '').toString());
     _espece3NomCtrl.text = (data['impact_ecologique_biodiversite_espece3_nom'] ?? '').toString();
-    _espece3ScoreAssign(
-        _ScoreValue.fromStorageString(data['impact_ecologique_biodiversite_espece3_score']));
+    _espece3Score = int.tryParse((data['impact_ecologique_biodiversite_espece3_score'] ?? '').toString());
 
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
-  }
-
-  // Small helpers so field values loaded from `data` land in the right
-  // `_ScoreValue` instance (fields are `final`, only their content mutates).
-  void _herbiersDisparaissentAssign(_ScoreValue v) {
-    _herbiersDisparaissent.score = v.score;
-    _herbiersDisparaissent.sign = v.sign;
-  }
-
-  void _fondSeCreuseAssign(_ScoreValue v) {
-    _fondSeCreuse.score = v.score;
-    _fondSeCreuse.sign = v.sign;
-  }
-
-  void _retourneLeFondAssign(_ScoreValue v) {
-    _retourneLeFond.score = v.score;
-    _retourneLeFond.sign = v.sign;
-  }
-
-  void _autreScoreAssign(_ScoreValue v) {
-    _autreScore.score = v.score;
-    _autreScore.sign = v.sign;
-  }
-
-  void _espece1ScoreAssign(_ScoreValue v) {
-    _espece1Score.score = v.score;
-    _espece1Score.sign = v.sign;
-  }
-
-  void _espece2ScoreAssign(_ScoreValue v) {
-    _espece2Score.score = v.score;
-    _espece2Score.sign = v.sign;
-  }
-
-  void _espece3ScoreAssign(_ScoreValue v) {
-    _espece3Score.score = v.score;
-    _espece3Score.sign = v.sign;
   }
 
   static String? _nullIfEmpty(dynamic v) {
@@ -189,41 +119,39 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     _service.scheduleFullDataSave(widget.formId, data);
   }
 
-  void _saveScore(String key, _ScoreValue v) => _save(key, v.toStorageString());
-
   InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
-    labelText: label,
-    hintText: 'Saisir ici...',
-    helperText: helperText,
-    helperMaxLines: 2,
-    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
+        labelText: label,
+        hintText: 'Saisir ici...',
+        helperText: helperText,
+        helperMaxLines: 2,
+        helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Widget _textField({
     required TextEditingController controller,
@@ -269,8 +197,6 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
       },
     );
   }
-
-  // ---- Header bars matching the dark / light gray rows of the Excel sheet.
 
   Widget _sectionHeader(String text) {
     return Container(
@@ -328,7 +254,6 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
 
   Widget _gap() => const SizedBox(height: 12);
 
-  /// One circular 1..5 pick button used inside the score rating field.
   Widget _scoreDot({
     required int n,
     required bool selected,
@@ -345,9 +270,7 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
           shape: BoxShape.circle,
           color: selected ? const Color(0xFF00D9D9) : Colors.white,
           border: Border.all(
-            color: selected
-                ? const Color(0xFF00D9D9)
-                : Colors.grey.shade300,
+            color: selected ? const Color(0xFF00D9D9) : Colors.grey.shade300,
             width: 1.5,
           ),
           boxShadow: selected
@@ -372,47 +295,11 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     );
   }
 
-  /// One '+' or '-' pick button used inside the score rating field.
-  Widget _signDot({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: selected ? const Color(0xFF1E3A8A) : Colors.white,
-          border: Border.all(
-            color: selected
-                ? const Color(0xFF1E3A8A)
-                : const Color(0xFF1E3A8A).withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : const Color(0xFF1E3A8A),
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// A "niveau d'évaluation" field: pick a level 1 to 5 and, optionally,
-  /// a sign (+ or -) to nuance it — e.g. "4+" or "2-".
-  Widget _scoreSignField({
+  Widget _scoreField({
     required String label,
     required String dataKey,
-    required _ScoreValue value,
+    required int? value,
+    required ValueChanged<int?> onChanged,
     String? helperText,
   }) {
     return Container(
@@ -450,30 +337,13 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
               for (int n = 1; n <= 5; n++)
                 _scoreDot(
                   n: n,
-                  selected: value.score == n,
-                  onTap: () => setState(() {
-                    value.score = value.score == n ? null : n;
-                    _saveScore(dataKey, value);
-                  }),
+                  selected: value == n,
+                  onTap: () {
+                    final newValue = value == n ? null : n;
+                    onChanged(newValue);
+                    _save(dataKey, newValue?.toString() ?? '');
+                  },
                 ),
-              const SizedBox(width: 10),
-              _signDot(
-                label: '+',
-                selected: value.sign == '+',
-                onTap: () => setState(() {
-                  value.sign = value.sign == '+' ? null : '+';
-                  _saveScore(dataKey, value);
-                }),
-              ),
-              const SizedBox(width: 6),
-              _signDot(
-                label: '-',
-                selected: value.sign == '-',
-                onTap: () => setState(() {
-                  value.sign = value.sign == '-' ? null : '-';
-                  _saveScore(dataKey, value);
-                }),
-              ),
             ],
           ),
         ],
@@ -485,8 +355,9 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
     required String title,
     required TextEditingController nomCtrl,
     required String nomKey,
-    required _ScoreValue score,
+    required int? score,
     required String scoreKey,
+    required ValueChanged<int?> onScoreChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -496,11 +367,12 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
           _plainLabel(title),
           _textField(controller: nomCtrl, label: 'Nom', dataKey: nomKey),
           _gap(),
-          _scoreSignField(
+          _scoreField(
             label: 'Score',
             dataKey: scoreKey,
             value: score,
-            helperText: '1-5 avec + et -',
+            onChanged: onScoreChanged,
+            helperText: 'Score de 1 à 5',
           ),
         ],
       ),
@@ -508,14 +380,27 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
   }
 
   void _goNext() {
-    _service.updateFormData(widget.formId, data, stepCompleted: 3);
+    _service.updateFormData(widget.formId, data, stepCompleted: 5);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data: data),
+      ),
+    );
+  }
 
-    Navigator.push(context, MaterialPageRoute(
-       builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data: data),
-     ));
+  void _goBack() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 4);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DynamiqueDuCrabePage(formId: widget.formId, data: data),
+      ),
+    );
   }
 
   void _goToLekHome() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 5);
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
       (route) => route.isFirst,
@@ -592,7 +477,6 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      // ---- Impact sur les habitats
                       _sectionCard(
                         children: [
                           _sectionHeader('Impact sur les habitats'),
@@ -604,44 +488,49 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                             onChanged: (v) => setState(() => _habitatsOuiNon = v),
                             helperText: 'oui / non',
                           ),
-                          _subHeader('Détail des changements'),
-                          _scoreSignField(
-                            label: 'Herbiers disparaissent',
-                            dataKey: 'impact_ecologique_habitats_herbiersDisparaissent',
-                            value: _herbiersDisparaissent,
-                            helperText: 'score 1-5',
-                          ),
-                          _gap(),
-                          _scoreSignField(
-                            label: 'Fond se creuse',
-                            dataKey: 'impact_ecologique_habitats_fondSeCreuse',
-                            value: _fondSeCreuse,
-                            helperText: 'score 1-5',
-                          ),
-                          _gap(),
-                          _scoreSignField(
-                            label: 'Retourne le fond',
-                            dataKey: 'impact_ecologique_habitats_retourneLeFond',
-                            value: _retourneLeFond,
-                            helperText: 'score 1-5',
-                          ),
-                          _gap(),
-                          _textField(
-                            controller: _autreTexteCtrl,
-                            label: 'Autre (à préciser)',
-                            dataKey: 'impact_ecologique_habitats_autreTexte',
-                          ),
-                          _gap(),
-                          _scoreSignField(
-                            label: 'Autre - score',
-                            dataKey: 'impact_ecologique_habitats_autreScore',
-                            value: _autreScore,
-                            helperText: 'score 1-5',
-                          ),
+                          if (_habitatsOuiNon == 'Oui') ...[
+                            _subHeader('Détail des changements'),
+                            _scoreField(
+                              label: 'Herbiers disparaissent',
+                              dataKey: 'impact_ecologique_habitats_herbiersDisparaissent',
+                              value: _herbiersDisparaissent,
+                              onChanged: (v) => setState(() => _herbiersDisparaissent = v),
+                              helperText: 'score 1-5',
+                            ),
+                            _gap(),
+                            _scoreField(
+                              label: 'Fond se creuse',
+                              dataKey: 'impact_ecologique_habitats_fondSeCreuse',
+                              value: _fondSeCreuse,
+                              onChanged: (v) => setState(() => _fondSeCreuse = v),
+                              helperText: 'score 1-5',
+                            ),
+                            _gap(),
+                            _scoreField(
+                              label: 'Retourne le fond',
+                              dataKey: 'impact_ecologique_habitats_retourneLeFond',
+                              value: _retourneLeFond,
+                              onChanged: (v) => setState(() => _retourneLeFond = v),
+                              helperText: 'score 1-5',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _autreTexteCtrl,
+                              label: 'Autre (à préciser)',
+                              dataKey: 'impact_ecologique_habitats_autreTexte',
+                            ),
+                            _gap(),
+                            _scoreField(
+                              label: 'Autre - score',
+                              dataKey: 'impact_ecologique_habitats_autreScore',
+                              value: _autreScore,
+                              onChanged: (v) => setState(() => _autreScore = v),
+                              helperText: 'score 1-5',
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 20),
-                      // ---- Impact sur la biodiversité
                       _sectionCard(
                         children: [
                           _sectionHeader('Impact sur la biodiversité'),
@@ -650,64 +539,68 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                             options: _ouiNonOptions,
                             value: _biodiversiteOuiNon,
                             dataKey: 'impact_ecologique_biodiversite_ouiNon',
-                            onChanged: (v) =>
-                                setState(() => _biodiversiteOuiNon = v),
+                            onChanged: (v) => setState(() => _biodiversiteOuiNon = v),
                             helperText: 'oui / non',
                           ),
-                          _subHeader('Détail des changements'),
-                          _dropdownField(
-                            label: 'Tendance',
-                            options: _tendanceOptions,
-                            value: _tendance,
-                            dataKey: 'impact_ecologique_biodiversite_tendance',
-                            onChanged: (v) => setState(() => _tendance = v),
-                            helperText: 'Aug / Dim / St / Var (année clés)',
-                          ),
-                          if (_tendance == 'Var') ...[
+                          if (_biodiversiteOuiNon == 'Oui') ...[
+                            _subHeader('Détail des changements'),
+                            _dropdownField(
+                              label: 'Tendance',
+                              options: _tendanceOptions,
+                              value: _tendance,
+                              dataKey: 'impact_ecologique_biodiversite_tendance',
+                              onChanged: (v) => setState(() => _tendance = v),
+                              helperText: 'Aug / Dim / St / Var (année clés)',
+                            ),
+                            if (_tendance == 'Var') ...[
+                              _gap(),
+                              _textField(
+                                controller: _tendanceAnneesClesCtrl,
+                                label: 'Année(s) clé(s)',
+                                dataKey: 'impact_ecologique_biodiversite_tendanceAnneesCles',
+                              ),
+                            ],
                             _gap(),
                             _textField(
-                              controller: _tendanceAnneesClesCtrl,
-                              label: 'Année(s) clé(s)',
-                              dataKey: 'impact_ecologique_biodiversite_tendanceAnneesCles',
+                              controller: _depuisQuandCtrl,
+                              label: 'Depuis quand',
+                              dataKey: 'impact_ecologique_biodiversite_depuisQuand',
+                              helperText: 'année',
+                              numeric: true,
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _zonePlusAffecteeCtrl,
+                              label: 'Zone la plus affectée',
+                              dataKey: 'impact_ecologique_biodiversite_zonePlusAffectee',
+                              helperText: 'Nom / carte (*)',
+                            ),
+                            _plainLabel('Espèces les plus affectées'),
+                            _especeBlock(
+                              title: 'Espèce 1',
+                              nomCtrl: _espece1NomCtrl,
+                              nomKey: 'impact_ecologique_biodiversite_espece1_nom',
+                              score: _espece1Score,
+                              scoreKey: 'impact_ecologique_biodiversite_espece1_score',
+                              onScoreChanged: (v) => setState(() => _espece1Score = v),
+                            ),
+                            _especeBlock(
+                              title: 'Espèce 2',
+                              nomCtrl: _espece2NomCtrl,
+                              nomKey: 'impact_ecologique_biodiversite_espece2_nom',
+                              score: _espece2Score,
+                              scoreKey: 'impact_ecologique_biodiversite_espece2_score',
+                              onScoreChanged: (v) => setState(() => _espece2Score = v),
+                            ),
+                            _especeBlock(
+                              title: 'Espèce 3',
+                              nomCtrl: _espece3NomCtrl,
+                              nomKey: 'impact_ecologique_biodiversite_espece3_nom',
+                              score: _espece3Score,
+                              scoreKey: 'impact_ecologique_biodiversite_espece3_score',
+                              onScoreChanged: (v) => setState(() => _espece3Score = v),
                             ),
                           ],
-                          _gap(),
-                          _textField(
-                            controller: _depuisQuandCtrl,
-                            label: 'Depuis quand',
-                            dataKey: 'impact_ecologique_biodiversite_depuisQuand',
-                            helperText: 'année',
-                            numeric: true,
-                          ),
-                          _gap(),
-                          _textField(
-                            controller: _zonePlusAffecteeCtrl,
-                            label: 'Zone la plus affectée',
-                            dataKey: 'impact_ecologique_biodiversite_zonePlusAffectee',
-                            helperText: 'Nom / carte (*)',
-                          ),
-                          _plainLabel('Espèces les plus affectées'),
-                          _especeBlock(
-                            title: 'Espèce 1',
-                            nomCtrl: _espece1NomCtrl,
-                            nomKey: 'impact_ecologique_biodiversite_espece1_nom',
-                            score: _espece1Score,
-                            scoreKey: 'impact_ecologique_biodiversite_espece1_score',
-                          ),
-                          _especeBlock(
-                            title: 'Espèce 2',
-                            nomCtrl: _espece2NomCtrl,
-                            nomKey: 'impact_ecologique_biodiversite_espece2_nom',
-                            score: _espece2Score,
-                            scoreKey: 'impact_ecologique_biodiversite_espece2_score',
-                          ),
-                          _especeBlock(
-                            title: 'Espèce 3',
-                            nomCtrl: _espece3NomCtrl,
-                            nomKey: 'impact_ecologique_biodiversite_espece3_nom',
-                            score: _espece3Score,
-                            scoreKey: 'impact_ecologique_biodiversite_espece3_score',
-                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -717,14 +610,7 @@ class _ImpactEcologiquePageState extends State<ImpactEcologiquePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () {
-                                _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => DynamiqueDuCrabePage(formId: widget.formId, data:data),
-                                    ),
-                                  );}
+                              onPressed: _goBack,
                             ),
                           ),
                           const SizedBox(width: 12),

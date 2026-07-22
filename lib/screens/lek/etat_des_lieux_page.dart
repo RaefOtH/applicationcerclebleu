@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
-import 'lek_home.dart';
-// TODO: replace with the actual previous/next pages of your flow if different.
 import 'adaptation_locale_page.dart';
+import 'lek_home.dart';
 import 'niveau_de_confiance_page.dart';
 
-/// Simple code/label pair used by the dropdowns of this page.
 class _OptionItem {
   final String code;
   final String label;
@@ -71,8 +69,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
 
   String? _reglementationAdequate;
 
-  final TextEditingController _mesuresGestionProposeesCtrl =
-      TextEditingController();
+  final TextEditingController _mesuresGestionProposeesCtrl = TextEditingController();
 
   String? _bloomsOuiNon;
   final TextEditingController _bloomsAnneeCtrl = TextEditingController();
@@ -84,12 +81,10 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
   String? _etatFond;
 
   String? _problemesCommercialisationOuiNon;
-  final TextEditingController _problemesCommercialisationPreciserCtrl =
-      TextEditingController();
+  final TextEditingController _problemesCommercialisationPreciserCtrl = TextEditingController();
 
   final TextEditingController _principalProblemeCtrl = TextEditingController();
-  final TextEditingController _suggestionAmeliorationCtrl =
-      TextEditingController();
+  final TextEditingController _suggestionAmeliorationCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -98,25 +93,20 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
 
     _perceptionCrabe = _nullIfEmpty(data['etatlieux_perceptionCrabe']);
     _etatGestionCrabe = _nullIfEmpty(data['etatlieux_etatGestionCrabe']);
-    _interetImplicationGestion =
-        _nullIfEmpty(data['etatlieux_interetImplicationGestion']);
+    _interetImplicationGestion = _nullIfEmpty(data['etatlieux_interetImplicationGestion']);
 
     _affiliationOuiNon = _nullIfEmpty(data['etatlieux_affiliation_ouiNon']);
-    _affiliationTypeCtrl.text =
-        (data['etatlieux_affiliation_type'] ?? '').toString();
+    _affiliationTypeCtrl.text = (data['etatlieux_affiliation_type'] ?? '').toString();
 
-    _reglementationAdequate =
-        _nullIfEmpty(data['etatlieux_reglementationAdequate']);
+    _reglementationAdequate = _nullIfEmpty(data['etatlieux_reglementationAdequate']);
 
-    _mesuresGestionProposeesCtrl.text =
-        (data['etatlieux_mesuresGestionProposees'] ?? '').toString();
+    _mesuresGestionProposeesCtrl.text = (data['etatlieux_mesuresGestionProposees'] ?? '').toString();
 
     _bloomsOuiNon = _nullIfEmpty(data['etatlieux_blooms_ouiNon']);
     _bloomsAnneeCtrl.text = (data['etatlieux_blooms_annee'] ?? '').toString();
 
     _pollutionsOuiNon = _nullIfEmpty(data['etatlieux_pollutions_ouiNon']);
-    _pollutionsTypeCtrl.text =
-        (data['etatlieux_pollutions_type'] ?? '').toString();
+    _pollutionsTypeCtrl.text = (data['etatlieux_pollutions_type'] ?? '').toString();
 
     _etatMilieuEaux = _nullIfEmpty(data['etatlieux_etatMilieuEaux']);
     _etatFond = _nullIfEmpty(data['etatlieux_etatFond']);
@@ -124,13 +114,10 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
     _problemesCommercialisationOuiNon =
         _nullIfEmpty(data['etatlieux_problemesCommercialisation_ouiNon']);
     _problemesCommercialisationPreciserCtrl.text =
-        (data['etatlieux_problemesCommercialisation_preciser'] ?? '')
-            .toString();
+        (data['etatlieux_problemesCommercialisation_preciser'] ?? '').toString();
 
-    _principalProblemeCtrl.text =
-        (data['etatlieux_principalProbleme'] ?? '').toString();
-    _suggestionAmeliorationCtrl.text =
-        (data['etatlieux_suggestionAmelioration'] ?? '').toString();
+    _principalProblemeCtrl.text = (data['etatlieux_principalProbleme'] ?? '').toString();
+    _suggestionAmeliorationCtrl.text = (data['etatlieux_suggestionAmelioration'] ?? '').toString();
 
     _waveController = AnimationController(
       vsync: this,
@@ -162,38 +149,38 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
   }
 
   InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
-    labelText: label,
-    hintText: 'Saisir ici...',
-    helperText: helperText,
-    helperMaxLines: 2,
-    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
+        labelText: label,
+        hintText: 'Saisir ici...',
+        helperText: helperText,
+        helperMaxLines: 2,
+        helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Widget _textField({
     required TextEditingController controller,
@@ -242,15 +229,27 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
   Widget _gap() => const SizedBox(height: 12);
 
   void _goNext() {
-    _service.updateFormData(widget.formId, data, stepCompleted: 6);
-    // TODO: navigate to whatever step follows "état des lieux" in your
-    // flow, e.g.:
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => NiveauDeConfiancePage(formId: widget.formId, data: data),
-    ));
+    _service.updateFormData(widget.formId, data, stepCompleted: 8);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NiveauDeConfiancePage(formId: widget.formId, data: data),
+      ),
+    );
+  }
+
+  void _goBack() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 7);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdaptationLocalePage(formId: widget.formId, data: data),
+      ),
+    );
   }
 
   void _goToLekHome() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 8);
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
       (route) => route.isFirst,
@@ -334,8 +333,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _perceptionOptions,
                             value: _perceptionCrabe,
                             dataKey: 'etatlieux_perceptionCrabe',
-                            onChanged: (v) =>
-                                setState(() => _perceptionCrabe = v),
+                            onChanged: (v) => setState(() => _perceptionCrabe = v),
                             helperText: 'Nuisance / ressource / les deux',
                           ),
                           _gap(),
@@ -344,19 +342,16 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _etatGestionOptions,
                             value: _etatGestionCrabe,
                             dataKey: 'etatlieux_etatGestionCrabe',
-                            onChanged: (v) =>
-                                setState(() => _etatGestionCrabe = v),
+                            onChanged: (v) => setState(() => _etatGestionCrabe = v),
                             helperText: 'Bonne / ± / inexistante',
                           ),
                           _gap(),
                           _dropdownField(
-                            label:
-                                "Intérêt dans l'implication de la gestion de CB",
+                            label: "Intérêt dans l'implication de la gestion de CB",
                             options: _interetOptions,
                             value: _interetImplicationGestion,
                             dataKey: 'etatlieux_interetImplicationGestion',
-                            onChanged: (v) => setState(
-                                () => _interetImplicationGestion = v),
+                            onChanged: (v) => setState(() => _interetImplicationGestion = v),
                             helperText: 'oui / non / indifférent',
                           ),
                           _gap(),
@@ -365,8 +360,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _ouiNonOptions,
                             value: _affiliationOuiNon,
                             dataKey: 'etatlieux_affiliation_ouiNon',
-                            onChanged: (v) =>
-                                setState(() => _affiliationOuiNon = v),
+                            onChanged: (v) => setState(() => _affiliationOuiNon = v),
                             helperText: 'oui / non et type',
                           ),
                           if (_affiliationOuiNon == 'Oui') ...[
@@ -383,8 +377,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _ouiNonOptions,
                             value: _reglementationAdequate,
                             dataKey: 'etatlieux_reglementationAdequate',
-                            onChanged: (v) =>
-                                setState(() => _reglementationAdequate = v),
+                            onChanged: (v) => setState(() => _reglementationAdequate = v),
                             helperText: 'oui / non',
                           ),
                           _gap(),
@@ -418,8 +411,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _ouiNonOptions,
                             value: _pollutionsOuiNon,
                             dataKey: 'etatlieux_pollutions_ouiNon',
-                            onChanged: (v) =>
-                                setState(() => _pollutionsOuiNon = v),
+                            onChanged: (v) => setState(() => _pollutionsOuiNon = v),
                             helperText: 'oui / non et type',
                           ),
                           if (_pollutionsOuiNon == 'Oui') ...[
@@ -436,8 +428,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             options: _etatMilieuOptions,
                             value: _etatMilieuEaux,
                             dataKey: 'etatlieux_etatMilieuEaux',
-                            onChanged: (v) =>
-                                setState(() => _etatMilieuEaux = v),
+                            onChanged: (v) => setState(() => _etatMilieuEaux = v),
                             helperText: 'Bon / ± / mauvais',
                           ),
                           _gap(),
@@ -454,20 +445,16 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             label: 'Problèmes concernant la commercialisation',
                             options: _ouiNonOptions,
                             value: _problemesCommercialisationOuiNon,
-                            dataKey:
-                                'etatlieux_problemesCommercialisation_ouiNon',
-                            onChanged: (v) => setState(
-                                () => _problemesCommercialisationOuiNon = v),
+                            dataKey: 'etatlieux_problemesCommercialisation_ouiNon',
+                            onChanged: (v) => setState(() => _problemesCommercialisationOuiNon = v),
                             helperText: 'oui / non - préciser',
                           ),
                           if (_problemesCommercialisationOuiNon == 'Oui') ...[
                             _gap(),
                             _textField(
-                              controller:
-                                  _problemesCommercialisationPreciserCtrl,
+                              controller: _problemesCommercialisationPreciserCtrl,
                               label: 'Préciser',
-                              dataKey:
-                                  'etatlieux_problemesCommercialisation_preciser',
+                              dataKey: 'etatlieux_problemesCommercialisation_preciser',
                             ),
                           ],
                           _gap(),
@@ -494,14 +481,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () {
-                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                    Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => AdaptationLocalePage(formId: widget.formId, data:data),
-                                      ),
-                                   );}
+                              onPressed: _goBack,
                             ),
                           ),
                           const SizedBox(width: 12),

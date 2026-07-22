@@ -10,6 +10,9 @@ class DefaultFirebaseOptions {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
+      // ADDED: Route Windows desktop builds to use your Web configuration profile
+      case TargetPlatform.windows:
+        return web;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not configured for this platform.',

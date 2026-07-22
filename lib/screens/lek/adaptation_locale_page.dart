@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
+import 'etat_des_lieux_page.dart';
+import 'impact_sur_la_peche_page.dart';
 import 'lek_home.dart';
 
-import 'impact_sur_la_peche_page.dart';
-import 'etat_des_lieux_page.dart';
-
-/// Simple code/label pair used by the dropdowns of this page.
 class _OptionItem {
   final String code;
   final String label;
@@ -51,25 +49,22 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
   final LekFormService _service = LekFormService();
   late AnimationController _waveController;
 
-  // ---- Modification des pratiques de pêche
   String? _modificationPratiques;
 
-  // ---- Types d'adaptations (plusieurs possibles)
   final TextEditingController _modificationEnginsCtrl = TextEditingController();
-  final TextEditingController _typeModificationEnginsCtrl =
-      TextEditingController();
+  final TextEditingController _typeModificationEnginsCtrl = TextEditingController();
   String? _enginsHorsUsageOuiNon;
   final TextEditingController _enginsHorsUsageNomCtrl = TextEditingController();
   final TextEditingController _nouveauxEnginsCtrl = TextEditingController();
   final TextEditingController _changementZoneCtrl = TextEditingController();
 
-  // ---- Changement du calendrier de pêche
   String? _changementCalendrierOuiNon;
   final TextEditingController _especesCiblesCtrl = TextEditingController();
-  String? _saisonPeche;
+
+  // Modification : passage à une liste pour choix multiples
+  List<String> _saisonsPeche = [];
   final TextEditingController _autresPreciserCtrl = TextEditingController();
 
-  // ---- Efficacité des adaptations
   String? _efficaciteAdaptations;
 
   @override
@@ -77,28 +72,28 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     super.initState();
     data = widget.data;
 
-    _modificationPratiques =
-        _nullIfEmpty(data['adaptation_modificationPratiques']);
+    _modificationPratiques = _nullIfEmpty(data['adaptation_modificationPratiques']);
 
-    _modificationEnginsCtrl.text =
-        (data['adaptation_modificationEngins'] ?? '').toString();
+    _modificationEnginsCtrl.text = (data['adaptation_modificationEngins'] ?? '').toString();
     _typeModificationEnginsCtrl.text =
         (data['adaptation_typeModificationEngins'] ?? '').toString();
-    _enginsHorsUsageOuiNon =
-        _nullIfEmpty(data['adaptation_enginsHorsUsage_ouiNon']);
-    _enginsHorsUsageNomCtrl.text =
-        (data['adaptation_enginsHorsUsage_nom'] ?? '').toString();
-    _nouveauxEnginsCtrl.text =
-        (data['adaptation_nouveauxEngins'] ?? '').toString();
-    _changementZoneCtrl.text =
-        (data['adaptation_changementZone'] ?? '').toString();
+    _enginsHorsUsageOuiNon = _nullIfEmpty(data['adaptation_enginsHorsUsage_ouiNon']);
+    _enginsHorsUsageNomCtrl.text = (data['adaptation_enginsHorsUsage_nom'] ?? '').toString();
+    _nouveauxEnginsCtrl.text = (data['adaptation_nouveauxEngins'] ?? '').toString();
+    _changementZoneCtrl.text = (data['adaptation_changementZone'] ?? '').toString();
 
-    _changementCalendrierOuiNon =
-        _nullIfEmpty(data['adaptation_changementCalendrier_ouiNon']);
+    _changementCalendrierOuiNon = _nullIfEmpty(data['adaptation_changementCalendrier_ouiNon']);
     _especesCiblesCtrl.text = (data['adaptation_especesCibles'] ?? '').toString();
-    _saisonPeche = _nullIfEmpty(data['adaptation_saisonPeche']);
-    _autresPreciserCtrl.text =
-        (data['adaptation_autresPreciser'] ?? '').toString();
+
+    // Récupération de la liste des saisons sélectionnées séparées par des virgules
+    final rawSaisons = (data['adaptation_saisonPeche'] ?? '').toString();
+    _saisonsPeche = rawSaisons
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    _autresPreciserCtrl.text = (data['adaptation_autresPreciser'] ?? '').toString();
 
     _efficaciteAdaptations = _nullIfEmpty(data['adaptation_efficacite']);
 
@@ -132,38 +127,38 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
   }
 
   InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
-    labelText: label,
-    hintText: 'Saisir ici...',
-    helperText: helperText,
-    helperMaxLines: 2,
-    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
+        labelText: label,
+        hintText: 'Saisir ici...',
+        helperText: helperText,
+        helperMaxLines: 2,
+        helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Widget _textField({
     required TextEditingController controller,
@@ -209,7 +204,74 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     );
   }
 
-  // ---- Header bars matching the dark / gray rows of the Excel sheet.
+  // NOUVEAU: Widget de sélection multiple avec des chips
+  Widget _multiSelectFilterChips({
+    required String label,
+    required List<_OptionItem> options,
+    required List<String> selectedValues,
+    required String dataKey,
+    required ValueChanged<List<String>> onChanged,
+    String? helperText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF1E3A8A),
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((opt) {
+            final isSelected = selectedValues.contains(opt.code);
+            return FilterChip(
+              label: Text(opt.label),
+              selected: isSelected,
+              selectedColor: const Color(0xFF00D9D9).withValues(alpha: 0.2),
+              checkmarkColor: const Color(0xFF1E3A8A),
+              labelStyle: TextStyle(
+                color: isSelected ? const Color(0xFF1E3A8A) : Colors.black87,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+              backgroundColor: const Color(0xFFF8FBFF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xFF00D9D9)
+                      : Colors.grey.shade300,
+                  width: isSelected ? 1.8 : 1.0,
+                ),
+              ),
+              onSelected: (selected) {
+                final updated = List<String>.from(selectedValues);
+                if (selected) {
+                  updated.add(opt.code);
+                } else {
+                  updated.remove(opt.code);
+                }
+                onChanged(updated);
+                _save(dataKey, updated.join(', '));
+              },
+            );
+          }).toList(),
+        ),
+        if (helperText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helperText,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
+        ],
+      ],
+    );
+  }
 
   Widget _sectionHeader(String text) {
     return Container(
@@ -254,15 +316,27 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
   Widget _gap() => const SizedBox(height: 12);
 
   void _goNext() {
-    _service.updateFormData(widget.formId, data, stepCompleted: 5);
-    // TODO: navigate to whatever step follows "adaptation locale" in your
-    // flow, e.g.:
-    Navigator.push(context, MaterialPageRoute(
-      builder: (_) => EtatDesLieuxPage(formId: widget.formId, data: data),
-    ));
+    _service.updateFormData(widget.formId, data, stepCompleted: 7);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EtatDesLieuxPage(formId: widget.formId, data: data),
+      ),
+    );
+  }
+
+  void _goBack() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 6);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data: data),
+      ),
+    );
   }
 
   void _goToLekHome() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 7);
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
       (route) => route.isFirst,
@@ -339,7 +413,6 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      // ---- Modification des pratiques de pêche
                       _sectionCard(
                         children: [
                           _dropdownField(
@@ -347,14 +420,12 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             options: _ouiNonOptions,
                             value: _modificationPratiques,
                             dataKey: 'adaptation_modificationPratiques',
-                            onChanged: (v) =>
-                                setState(() => _modificationPratiques = v),
+                            onChanged: (v) => setState(() => _modificationPratiques = v),
                             helperText: 'oui / non',
                           ),
                         ],
                       ),
                       const SizedBox(height: 20),
-                      // ---- Types d'adaptations (plusieurs possibles)
                       _sectionCard(
                         children: [
                           _subHeader("Types d'adaptations (plusieurs possibles)"),
@@ -369,8 +440,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             controller: _typeModificationEnginsCtrl,
                             label: 'Type de modification engins',
                             dataKey: 'adaptation_typeModificationEngins',
-                            helperText:
-                                'Préciser (maillage, nature de filet, longueur, etc.)',
+                            helperText: 'Préciser (maillage, nature de filet, longueur, etc.)',
                           ),
                           _gap(),
                           _dropdownField(
@@ -378,8 +448,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             options: _ouiNonOptions,
                             value: _enginsHorsUsageOuiNon,
                             dataKey: 'adaptation_enginsHorsUsage_ouiNon',
-                            onChanged: (v) =>
-                                setState(() => _enginsHorsUsageOuiNon = v),
+                            onChanged: (v) => setState(() => _enginsHorsUsageOuiNon = v),
                             helperText: 'oui / non',
                           ),
                           if (_enginsHorsUsageOuiNon == 'Oui') ...[
@@ -407,7 +476,6 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                         ],
                       ),
                       const SizedBox(height: 20),
-                      // ---- Changement du calendrier de pêche
                       _sectionCard(
                         children: [
                           _sectionHeader('Changement du calendrier de pêche'),
@@ -416,8 +484,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             options: _ouiNonOptions,
                             value: _changementCalendrierOuiNon,
                             dataKey: 'adaptation_changementCalendrier_ouiNon',
-                            onChanged: (v) => setState(
-                                () => _changementCalendrierOuiNon = v),
+                            onChanged: (v) => setState(() => _changementCalendrierOuiNon = v),
                             helperText: 'oui / non',
                           ),
                           _gap(),
@@ -428,13 +495,14 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             helperText: 'Nom',
                           ),
                           _gap(),
-                          _dropdownField(
+                          // Modification ici : Remplacement du Dropdown par le composant MultiSelect
+                          _multiSelectFilterChips(
                             label: 'Saison de pêche',
                             options: _saisonOptions,
-                            value: _saisonPeche,
+                            selectedValues: _saisonsPeche,
                             dataKey: 'adaptation_saisonPeche',
-                            onChanged: (v) => setState(() => _saisonPeche = v),
-                            helperText: 'H / P / E / A',
+                            onChanged: (vals) => setState(() => _saisonsPeche = vals),
+                            helperText: 'Sélectionnez une ou plusieurs saisons (H / P / E / A)',
                           ),
                           _gap(),
                           _textField(
@@ -447,7 +515,6 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                         ],
                       ),
                       const SizedBox(height: 20),
-                      // ---- Efficacité des adaptations
                       _sectionCard(
                         children: [
                           _dropdownField(
@@ -455,8 +522,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             options: _efficaciteOptions,
                             value: _efficaciteAdaptations,
                             dataKey: 'adaptation_efficacite',
-                            onChanged: (v) =>
-                                setState(() => _efficaciteAdaptations = v),
+                            onChanged: (v) => setState(() => _efficaciteAdaptations = v),
                             helperText: 'Oui / Partiellement / Non',
                           ),
                         ],
@@ -468,14 +534,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () {
-                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                    Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => ImpactSurLaPechePage(formId: widget.formId, data:data),
-                                      ),
-                                   );}
+                              onPressed: _goBack,
                             ),
                           ),
                           const SizedBox(width: 12),

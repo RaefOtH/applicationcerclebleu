@@ -1,25 +1,19 @@
-import 'package:applicationstagepfe/screens/lek/unite_de_peche_page.dart';
 import 'package:flutter/material.dart';
 
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
 import 'impact_ecologique_page.dart';
 import 'lek_home.dart';
+import 'unite_de_peche_page.dart';
 
-/// Simple code/label pair used by every dropdown in this page
-/// (S/V/R/H, H/P/E/A, Aug/Dim/St/Var(année clés), Oui/Non).
 class _OptionItem {
   final String code;
   final String label;
   const _OptionItem(this.code, this.label);
 }
 
-/// Holds every controller/value needed to describe ONE species block
-/// (a-1 C. Sapidus / a-2 P. segis / a-3 Les 2 espèces confondues).
-/// Having this as a small data holder lets the three identical blocks
-/// shown in the Excel sheet be built from a single piece of code.
 class _EspeceControllers {
-  final String prefix; // e.g. 'crabe_sapidus'
+  final String prefix;
 
   final anneeCtrl = TextEditingController();
   final environnementCtrl = TextEditingController();
@@ -37,7 +31,7 @@ class _EspeceControllers {
   String? saisonForteAbondance;
   String? saisonReproduction;
   String? presenceJuveniles;
-  String? evolutionQuantites; // Oui / Non
+  String? evolutionQuantites;
   String? tendance;
 
   _EspeceControllers(this.prefix);
@@ -45,20 +39,14 @@ class _EspeceControllers {
   void loadFrom(Map<String, dynamic> data) {
     anneeCtrl.text = (data['${prefix}_annee1ereObservation'] ?? '').toString();
     environnementCtrl.text = (data['${prefix}_environnement'] ?? '').toString();
-    distApparitionCtrl.text =
-        (data['${prefix}_distributionApparition'] ?? '').toString();
-    distActuelleCtrl.text =
-        (data['${prefix}_distributionActuelle'] ?? '').toString();
+    distApparitionCtrl.text = (data['${prefix}_distributionApparition'] ?? '').toString();
+    distActuelleCtrl.text = (data['${prefix}_distributionActuelle'] ?? '').toString();
     profondeurCtrl.text = (data['${prefix}_profondeur'] ?? '').toString();
-    zonesSensiblesCtrl.text =
-        (data['${prefix}_zonesSensibles'] ?? '').toString();
+    zonesSensiblesCtrl.text = (data['${prefix}_zonesSensibles'] ?? '').toString();
     tailleMoyenneCtrl.text = (data['${prefix}_tailleMoyenne'] ?? '').toString();
-    zonePlusAffecteeCtrl.text =
-        (data['${prefix}_zonePlusAffectee'] ?? '').toString();
-    abondanceAnneesClesCtrl.text =
-        (data['${prefix}_abondanceAnneesCles'] ?? '').toString();
-    tendanceAnneesClesCtrl.text =
-        (data['${prefix}_tendanceAnneesCles'] ?? '').toString();
+    zonePlusAffecteeCtrl.text = (data['${prefix}_zonePlusAffectee'] ?? '').toString();
+    abondanceAnneesClesCtrl.text = (data['${prefix}_abondanceAnneesCles'] ?? '').toString();
+    tendanceAnneesClesCtrl.text = (data['${prefix}_tendanceAnneesCles'] ?? '').toString();
 
     typeFond = _nullIfEmpty(data['${prefix}_typeFond']);
     abondance5ans = _nullIfEmpty(data['${prefix}_abondance5ans']);
@@ -134,11 +122,9 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
 
   late final _EspeceControllers _sapidus = _EspeceControllers('dynamique_crabe_sapidus');
   late final _EspeceControllers _segnis = _EspeceControllers('dynamique_crabe_segnis');
-  late final _EspeceControllers _confondues =
-      _EspeceControllers('dynamique_crabe_confondues');
+  late final _EspeceControllers _confondues = _EspeceControllers('dynamique_crabe_confondues');
 
   String? _distinction2Especes;
-
   late AnimationController _waveController;
 
   @override
@@ -146,9 +132,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     super.initState();
     data = widget.data;
 
-    _distinction2Especes =
-        _EspeceControllers._nullIfEmpty(data['dynamique_crabe_distinction2Especes']);
-
+    _distinction2Especes = _EspeceControllers._nullIfEmpty(data['dynamique_crabe_distinction2Especes']);
     _sapidus.loadFrom(data);
     _segnis.loadFrom(data);
     _confondues.loadFrom(data);
@@ -174,38 +158,38 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
   }
 
   InputDecoration _dec(String label, {String? helperText}) => InputDecoration(
-    labelText: label,
-    hintText: 'Saisir ici...',
-    helperText: helperText,
-    helperMaxLines: 2,
-    helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
+        labelText: label,
+        hintText: 'Saisir ici...',
+        helperText: helperText,
+        helperMaxLines: 2,
+        helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Widget _textField({
     required TextEditingController controller,
@@ -252,8 +236,6 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     );
   }
 
-  // ---- Header bars matching the dark / light gray rows of the Excel sheet.
-
   Widget _sectionHeader(String text) {
     return Container(
       width: double.infinity,
@@ -296,8 +278,6 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
 
   Widget _gap() => const SizedBox(height: 12);
 
-  /// Builds one full species block (a-1 / a-2 / a-3), reproducing every
-  /// row of the Excel sheet as a stacked column of fields.
   Widget _buildEspeceSection({
     required String sectionTitle,
     required String evolutionLabel,
@@ -451,7 +431,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
 
   void _goNext() {
     data['dynamique_crabe_distinction2Especes'] = _distinction2Especes ?? '';
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+    _service.updateFormData(widget.formId, data, stepCompleted: 4);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -460,7 +440,18 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     );
   }
 
+  void _goBack() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 3);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UniteDePechePage(formId: widget.formId, data: data),
+      ),
+    );
+  }
+
   void _goToLekHome() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 4);
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
       (route) => route.isFirst,
@@ -541,9 +532,9 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                     children: [
                       _sectionCard(
                         children: [
-                          Text(
+                          const Text(
                             'Dynamique du crabe (photos des deux espèces)',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Color(0xFF1E3A8A),
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
@@ -555,10 +546,8 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                             options: _ouiNonOptions,
                             value: _distinction2Especes,
                             dataKey: 'dynamique_crabe_distinction2Especes',
-                            onChanged: (v) =>
-                                setState(() => _distinction2Especes = v),
-                            helperText:
-                                'oui / non : si non passer à a.3',
+                            onChanged: (v) => setState(() => _distinction2Especes = v),
+                            helperText: 'oui / non : si non passer à a.3',
                           ),
                         ],
                       ),
@@ -569,23 +558,20 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                             _buildEspeceSection(
                               sectionTitle: 'a-1 C. Sapidus',
                               evolutionLabel:
-                                  'a-1-1-Evolution des quantités capturées '
-                                  'de crabe durant les 5 dernières années',
+                                  'a-1-1-Evolution des quantités capturées de crabe durant les 5 dernières années',
                               c: _sapidus,
                             ),
                             _buildEspeceSection(
                               sectionTitle: 'a-2 P. segis',
                               evolutionLabel:
-                                  'a-2-1-Evolution des quantités capturées '
-                                  'de crabe durant les 5 dernières années',
+                                  'a-2-1-Evolution des quantités capturées de crabe durant les 5 dernières années',
                               c: _segnis,
                             ),
                           ],
                           _buildEspeceSection(
                             sectionTitle: 'a-3 Les 2 espèces conf',
                             evolutionLabel:
-                                'a-3-1-Evolution des quantités capturées '
-                                'de crabe durant les 5 dernières années',
+                                'a-3-1-Evolution des quantités capturées de crabe durant les 5 dernières années',
                             c: _confondues,
                           ),
                         ],
@@ -597,14 +583,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
                             child: _OutlineButton(
                               text: 'Précédent',
                               icon: Icons.arrow_back,
-                              onPressed: () {
-                                _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => UniteDePechePage(formId: widget.formId, data:data),
-                                    ),
-                                  );}
+                              onPressed: _goBack,
                             ),
                           ),
                           const SizedBox(width: 12),

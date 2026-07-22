@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
 import '../../widgets/app_feedback.dart';
+import 'etat_des_lieux_page.dart';
 import 'lek_home.dart';
 
 class NiveauDeConfiancePage extends StatefulWidget {
@@ -21,15 +22,13 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
   late AnimationController _waveController;
   final LekFormService _service = LekFormService();
 
-  // Liste des choix disponibles pour le niveau de confiance
   final List<String> _confianceOptions = ['Faible', 'Moyen', 'Fort'];
 
   @override
   void initState() {
     super.initState();
     data = widget.data;
-    
-    // Récupération de la valeur stockée
+
     final String initialValue = (data['Niveau_de_confiance'] ?? '').toString().trim();
     if (_confianceOptions.contains(initialValue)) {
       _selectedValue = initialValue;
@@ -51,41 +50,44 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
     required String label,
     String? hint,
   }) => InputDecoration(
-    labelText: label,
-    hintText: hint ?? 'Sélectionner...',
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
-    floatingLabelAlignment: FloatingLabelAlignment.start,
-    labelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w600,
-    ),
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-    floatingLabelStyle: const TextStyle(
-      color: Color(0xFF1E3A8A),
-      fontWeight: FontWeight.w700,
-    ),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: Colors.grey.shade300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
-    ),
-  );
+        labelText: label,
+        hintText: hint ?? 'Sélectionner...',
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        floatingLabelAlignment: FloatingLabelAlignment.start,
+        labelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w600,
+        ),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Future<void> _finish() async {
     data['Niveau_de_confiance'] = _selectedValue ?? '';
+    // Correction : retrait du paramètre 'status' pour supprimer l'erreur de compilation
+    await _service.updateFormData(widget.formId, data, stepCompleted: 9);
+    if (!mounted) return;
     showModernSuccessSnackBar(context);
 
-    await Future.delayed(const Duration(milliseconds: 2100));
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
@@ -93,7 +95,19 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
     );
   }
 
+  void _goBack() {
+    // Décrémentation de la progression à 8 lors du retour en arrière
+    _service.updateFormData(widget.formId, data, stepCompleted: 8);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EtatDesLieuxPage(formId: widget.formId, data: data),
+      ),
+    );
+  }
+
   void _goToLekHome() {
+    _service.updateFormData(widget.formId, data, stepCompleted: 9);
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
       (route) => route.isFirst,
@@ -155,10 +169,10 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        '\u00C9tape 9/9',
+                      const Text(
+                        'Étape 9/9',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -205,10 +219,24 @@ class _NiveauDeConfiancePageState extends State<NiveauDeConfiancePage>
                         ],
                       ),
                       const SizedBox(height: 24),
-                      _PrimaryGradientButton(
-                        text: 'Terminer',
-                        icon: Icons.check,
-                        onPressed: _finish,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _OutlineButton(
+                              text: 'Précédent',
+                              icon: Icons.arrow_back,
+                              onPressed: _goBack,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _PrimaryGradientButton(
+                              text: 'Terminer',
+                              icon: Icons.check,
+                              onPressed: _finish,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -295,6 +323,41 @@ class _PrimaryGradientButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OutlineButton extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _OutlineButton({
+    required this.text,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: const Color(0xFF1E3A8A)),
+      label: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(
+          color: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
       ),
     );
   }

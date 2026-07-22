@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
 import 'lek_home.dart';
-// TODO: replace with the actual previous/next pages of your flow if different.
 import 'impact_ecologique_page.dart';
 import 'adaptation_locale_page.dart';
 
@@ -12,15 +11,6 @@ class _OptionItem {
   final String code;
   final String label;
   const _OptionItem(this.code, this.label);
-}
-
-/// A free-text name with an optional qualifying sign (+ / -),
-/// e.g. "Callinectes sapidus" tagged "+".
-class _NomSignValue {
-  final TextEditingController nomCtrl = TextEditingController();
-  String? sign; // '+' | '-' | null
-
-  void dispose() => nomCtrl.dispose();
 }
 
 class ImpactSurLaPechePage extends StatefulWidget {
@@ -64,7 +54,7 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
 
   static const List<_OptionItem> _acceptationOptions = [
     _OptionItem('Non', 'Non'),
-    _OptionItem('±', '±'),
+    _OptionItem('Plus ou moins', 'Plus ou moins'),
     _OptionItem('Bonne', 'Bonne'),
   ];
 
@@ -106,9 +96,9 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
       TextEditingController();
   final TextEditingController _evolutionTailleZonePlusAffecteeCtrl =
       TextEditingController();
-  final _NomSignValue _especeAffectee1 = _NomSignValue();
-  final _NomSignValue _especeAffectee2 = _NomSignValue();
-  final _NomSignValue _especeAffectee3 = _NomSignValue();
+  final TextEditingController _especeAffectee1Ctrl = TextEditingController();
+  final TextEditingController _especeAffectee2Ctrl = TextEditingController();
+  final TextEditingController _especeAffectee3Ctrl = TextEditingController();
 
   // ---- Impact sur la rentabilité du pêcheur
   String? _acceptationCrabe;
@@ -178,20 +168,21 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
         (data['impact_peche_evolutionTailleEspeces_zonePlusAffectee'] ?? '')
             .toString();
 
-    _especeAffectee1.nomCtrl.text =
+    _especeAffectee1Ctrl.text =
         (data['impact_peche_evolutionTailleEspeces_espece1_nom'] ?? '').toString();
-    _especeAffectee1.sign =
-        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece1_signe']);
-    _especeAffectee2.nomCtrl.text =
+    _especeAffectee2Ctrl.text =
         (data['impact_peche_evolutionTailleEspeces_espece2_nom'] ?? '').toString();
-    _especeAffectee2.sign =
-        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece2_signe']);
-    _especeAffectee3.nomCtrl.text =
+    _especeAffectee3Ctrl.text =
         (data['impact_peche_evolutionTailleEspeces_espece3_nom'] ?? '').toString();
-    _especeAffectee3.sign =
-        _nullIfEmpty(data['impact_peche_evolutionTailleEspeces_espece3_signe']);
 
-    _acceptationCrabe = _nullIfEmpty(data['impact_peche_acceptationCrabe']);
+    // Migration des anciennes données "±" vers "Plus ou moins"
+    String? rawAcceptation = _nullIfEmpty(data['impact_peche_acceptationCrabe']);
+    if (rawAcceptation == '±') {
+      rawAcceptation = 'Plus ou moins';
+      _save('impact_peche_acceptationCrabe', 'Plus ou moins');
+    }
+    _acceptationCrabe = rawAcceptation;
+
     _tendanceValeur = _nullIfEmpty(data['impact_peche_tendanceValeur']);
     _tendanceValeurAnneesClesCtrl.text =
         (data['impact_peche_tendanceValeurAnneesCles'] ?? '').toString();
@@ -234,9 +225,9 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
     _evolutionTailleTendanceAnneesClesCtrl.dispose();
     _evolutionTailleDepuisQuandCtrl.dispose();
     _evolutionTailleZonePlusAffecteeCtrl.dispose();
-    _especeAffectee1.dispose();
-    _especeAffectee2.dispose();
-    _especeAffectee3.dispose();
+    _especeAffectee1Ctrl.dispose();
+    _especeAffectee2Ctrl.dispose();
+    _especeAffectee3Ctrl.dispose();
     _tendanceValeurAnneesClesCtrl.dispose();
     _prixVenteConsommateurCtrl.dispose();
     _prixIndustrieCtrl.dispose();
@@ -311,8 +302,12 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
     required ValueChanged<String?> onChanged,
     String? helperText,
   }) {
+    // Garde-fou : vérifie si la valeur actuelle correspond à l'une des options proposées
+    final bool valueExists = value != null && options.any((o) => o.code == value);
+    final String? safeValue = valueExists ? value : null;
+
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue: safeValue,
       isExpanded: true,
       decoration: _dec(label, helperText: helperText),
       hint: const Text('Choisir...'),
@@ -330,8 +325,6 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
       },
     );
   }
-
-  // ---- Header bars matching the dark / gray rows of the Excel sheet.
 
   Widget _sectionHeader(String text) {
     return Container(
@@ -409,118 +402,13 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
 
   Widget _gap() => const SizedBox(height: 12);
 
-  Widget _signDot({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: selected ? const Color(0xFF1E3A8A) : Colors.white,
-          border: Border.all(
-            color: selected
-                ? const Color(0xFF1E3A8A)
-                : const Color(0xFF1E3A8A).withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : const Color(0xFF1E3A8A),
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// "Nom (+/-)" field: a name plus an optional qualifying sign.
-  Widget _nomSignField({
-    required String label,
-    required String nomKey,
-    required String signKey,
-    required _NomSignValue value,
-    String? helperText,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FBFF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF1E3A8A),
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-          if (helperText != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              helperText,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-            ),
-          ],
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: value.nomCtrl,
-            decoration: _dec('Nom').copyWith(
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            onChanged: (v) => _save(nomKey, v),
-          ),
-          const SizedBox(height: 10),
-          /*Row(
-            children: [
-              _signDot(
-                label: '+',
-                selected: value.sign == '+',
-                onTap: () => setState(() {
-                  value.sign = value.sign == '+' ? null : '+';
-                  _save(signKey, value.sign ?? '');
-                }),
-              ),
-              const SizedBox(width: 8),
-              _signDot(
-                label: '-',
-                selected: value.sign == '-',
-                onTap: () => setState(() {
-                  value.sign = value.sign == '-' ? null : '-';
-                  _save(signKey, value.sign ?? '');
-                }),
-              ),
-            ],
-          ),*/
-        ],
-      ),
-    );
-  }
-
   void _goNext() {
-    _service.updateFormData(widget.formId, data, stepCompleted: 4);
+    _service.updateFormData(widget.formId, data, stepCompleted: 6);
     Navigator.push(
       context, 
       MaterialPageRoute(
         builder: (_) => AdaptationLocalePage(formId: widget.formId, data: data),
     ));
-    
   }
 
   void _goToLekHome() {
@@ -611,12 +499,14 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                             onChanged: (v) => setState(() => _degatsEngins = v),
                             helperText: 'Jamais / Rarement / Souvent',
                           ),
-                          _gap(),
-                          _textField(
-                            controller: _enginPlusImpacteCtrl,
-                            label: 'Engin le plus impacté',
-                            dataKey: 'impact_peche_enginPlusImpacte',
-                          ),
+                          if (_degatsEngins != null && _degatsEngins != 'Jamais') ...[
+                            _gap(),
+                            _textField(
+                              controller: _enginPlusImpacteCtrl,
+                              label: 'Engin le plus impacté',
+                              dataKey: 'impact_peche_enginPlusImpacte',
+                            ),
+                          ],
                           _gap(),
                           _dropdownField(
                             label: 'Dégâts physique sur le pêcheur',
@@ -679,54 +569,56 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                                 setState(() => _evolutionCapturesOuiNon = v),
                             helperText: 'oui / non',
                           ),
-                          _gap(),
-                          _dropdownField(
-                            label: 'Tendance',
-                            options: _tendanceCompleteOptions,
-                            value: _evolutionCapturesTendance,
-                            dataKey: 'impact_peche_evolutionCapturesTotales_tendance',
-                            onChanged: (v) =>
-                                setState(() => _evolutionCapturesTendance = v),
-                            helperText: 'Aug / Dim / St / Var (année clés)',
-                          ),
-                          if (_evolutionCapturesTendance == 'Var') ...[
+                          if (_evolutionCapturesOuiNon == 'Oui') ...[
+                            _gap(),
+                            _dropdownField(
+                              label: 'Tendance',
+                              options: _tendanceCompleteOptions,
+                              value: _evolutionCapturesTendance,
+                              dataKey: 'impact_peche_evolutionCapturesTotales_tendance',
+                              onChanged: (v) =>
+                                  setState(() => _evolutionCapturesTendance = v),
+                              helperText: 'Aug / Dim / St / Var (année clés)',
+                            ),
+                            if (_evolutionCapturesTendance == 'Var') ...[
+                              _gap(),
+                              _textField(
+                                controller:
+                                    _evolutionCapturesTendanceAnneesClesCtrl,
+                                label: 'Année(s) clé(s)',
+                                dataKey:
+                                    'impact_peche_evolutionCapturesTotales_tendanceAnneesCles',
+                              ),
+                            ],
                             _gap(),
                             _textField(
-                              controller:
-                                  _evolutionCapturesTendanceAnneesClesCtrl,
-                              label: 'Année(s) clé(s)',
+                              controller: _evolutionCapturesDepuisQuandCtrl,
+                              label: 'Depuis quand',
                               dataKey:
-                                  'impact_peche_evolutionCapturesTotales_tendanceAnneesCles',
+                                  'impact_peche_evolutionCapturesTotales_depuisQuand',
+                            ),
+                            _plainLabel('Espèces dominantes'),
+                            _textField(
+                              controller: _especeDominante1Ctrl,
+                              label: 'Espèce 1',
+                              dataKey: 'impact_peche_evolutionCapturesTotales_espece1',
+                              helperText: 'Nom / carte (initiale Sp)',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _especeDominante2Ctrl,
+                              label: 'Espèce 2',
+                              dataKey: 'impact_peche_evolutionCapturesTotales_espece2',
+                              helperText: 'Nom / carte (initiale Sp)',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _especeDominante3Ctrl,
+                              label: 'Espèce 3',
+                              dataKey: 'impact_peche_evolutionCapturesTotales_espece3',
+                              helperText: 'Nom / carte (initiale Sp)',
                             ),
                           ],
-                          _gap(),
-                          _textField(
-                            controller: _evolutionCapturesDepuisQuandCtrl,
-                            label: 'Depuis quand',
-                            dataKey:
-                                'impact_peche_evolutionCapturesTotales_depuisQuand',
-                          ),
-                          _plainLabel('Espèces dominantes'),
-                          _textField(
-                            controller: _especeDominante1Ctrl,
-                            label: 'Espèce 1',
-                            dataKey: 'impact_peche_evolutionCapturesTotales_espece1',
-                            helperText: 'Nom / carte (initiale Sp)',
-                          ),
-                          _gap(),
-                          _textField(
-                            controller: _especeDominante2Ctrl,
-                            label: 'Espèce 2',
-                            dataKey: 'impact_peche_evolutionCapturesTotales_espece2',
-                            helperText: 'Nom / carte (initiale Sp)',
-                          ),
-                          _gap(),
-                          _textField(
-                            controller: _especeDominante3Ctrl,
-                            label: 'Espèce 3',
-                            dataKey: 'impact_peche_evolutionCapturesTotales_espece3',
-                            helperText: 'Nom / carte (initiale Sp)',
-                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -745,68 +637,58 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                                 setState(() => _evolutionTailleOuiNon = v),
                             helperText: 'oui / non',
                           ),
-                          _gap(),
-                          _dropdownField(
-                            label: 'Tendance',
-                            options: _tendanceCompleteOptions,
-                            value: _evolutionTailleTendance,
-                            dataKey: 'impact_peche_evolutionTailleEspeces_tendance',
-                            onChanged: (v) =>
-                                setState(() => _evolutionTailleTendance = v),
-                            helperText: 'Aug / Dim / St / Var (année clés)',
-                          ),
-                          if (_evolutionTailleTendance == 'Var') ...[
+                          if (_evolutionTailleOuiNon == 'Oui') ...[
+                            _gap(),
+                            _dropdownField(
+                              label: 'Tendance',
+                              options: _tendanceCompleteOptions,
+                              value: _evolutionTailleTendance,
+                              dataKey: 'impact_peche_evolutionTailleEspeces_tendance',
+                              onChanged: (v) =>
+                                  setState(() => _evolutionTailleTendance = v),
+                              helperText: 'Aug / Dim / St / Var (année clés)',
+                            ),
+                            if (_evolutionTailleTendance == 'Var') ...[
+                              _gap(),
+                              _textField(
+                                controller: _evolutionTailleTendanceAnneesClesCtrl,
+                                label: 'Année(s) clé(s)',
+                                dataKey:
+                                    'impact_peche_evolutionTailleEspeces_tendanceAnneesCles',
+                              ),
+                            ],
                             _gap(),
                             _textField(
-                              controller: _evolutionTailleTendanceAnneesClesCtrl,
-                              label: 'Année(s) clé(s)',
+                              controller: _evolutionTailleDepuisQuandCtrl,
+                              label: 'Depuis quand',
+                              dataKey: 'impact_peche_evolutionTailleEspeces_depuisQuand',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _evolutionTailleZonePlusAffecteeCtrl,
+                              label: 'Nom de la zone la plus affectée',
                               dataKey:
-                                  'impact_peche_evolutionTailleEspeces_tendanceAnneesCles',
+                                  'impact_peche_evolutionTailleEspeces_zonePlusAffectee',
+                            ),
+                            _plainLabel('Espèces les plus affectées'),
+                            _textField(
+                              controller: _especeAffectee1Ctrl,
+                              label: 'Espèce 1',
+                              dataKey: 'impact_peche_evolutionTailleEspeces_espece1_nom',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _especeAffectee2Ctrl,
+                              label: 'Espèce 2',
+                              dataKey: 'impact_peche_evolutionTailleEspeces_espece2_nom',
+                            ),
+                            _gap(),
+                            _textField(
+                              controller: _especeAffectee3Ctrl,
+                              label: 'Espèce 3',
+                              dataKey: 'impact_peche_evolutionTailleEspeces_espece3_nom',
                             ),
                           ],
-                          _gap(),
-                          _textField(
-                            controller: _evolutionTailleDepuisQuandCtrl,
-                            label: 'Depuis quand',
-                            dataKey: 'impact_peche_evolutionTailleEspeces_depuisQuand',
-                          ),
-                          _gap(),
-                          _textField(
-                            controller: _evolutionTailleZonePlusAffecteeCtrl,
-                            label: 'Nom de la zone la plus affectée',
-                            dataKey:
-                                'impact_peche_evolutionTailleEspeces_zonePlusAffectee',
-                          ),
-                          _plainLabel('Espèces les plus affectées'),
-                          _nomSignField(
-                            label: 'Espèce 1',
-                            nomKey:
-                                'impact_peche_evolutionTailleEspeces_espece1_nom',
-                            signKey:
-                                'impact_peche_evolutionTailleEspeces_espece1_signe',
-                            value: _especeAffectee1,
-                            helperText: 'Nom (+/-)',
-                          ),
-                          _gap(),
-                          _nomSignField(
-                            label: 'Espèce 2',
-                            nomKey:
-                                'impact_peche_evolutionTailleEspeces_espece2_nom',
-                            signKey:
-                                'impact_peche_evolutionTailleEspeces_espece2_signe',
-                            value: _especeAffectee2,
-                            helperText: 'Nom (+/-)',
-                          ),
-                          _gap(),
-                          _nomSignField(
-                            label: 'Espèce 3',
-                            nomKey:
-                                'impact_peche_evolutionTailleEspeces_espece3_nom',
-                            signKey:
-                                'impact_peche_evolutionTailleEspeces_espece3_signe',
-                            value: _especeAffectee3,
-                            helperText: 'Nom (+/-)',
-                          ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -823,7 +705,7 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                             dataKey: 'impact_peche_acceptationCrabe',
                             onChanged: (v) =>
                                 setState(() => _acceptationCrabe = v),
-                            helperText: 'Non / ± / Bonne',
+                            helperText: 'Non / Plus ou moins / Bonne',
                           ),
                           _gap(),
                           _dropdownField(
@@ -923,13 +805,14 @@ class _ImpactSurLaPechePageState extends State<ImpactSurLaPechePage>
                               text: 'Précédent',
                               icon: Icons.arrow_back,
                               onPressed: () {
-                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                    Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => ImpactEcologiquePage(formId: widget.formId, data:data),
-                                      ),
-                                   );}
+                                _service.updateFormData(widget.formId, data, stepCompleted: 5);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ImpactEcologiquePage(formId: widget.formId, data: data),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),

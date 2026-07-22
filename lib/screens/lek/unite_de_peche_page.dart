@@ -1,11 +1,11 @@
-import 'package:applicationstagepfe/screens/lek/info_page.dart';
 import 'package:flutter/material.dart';
+
 import '../../painters/wave_painter.dart';
 import '../../services/lek_form_service.dart';
 import 'dynamique_du_crabe_page.dart';
+import 'info_page.dart';
+import 'lek_home.dart';
 
-
-// 1. DÉCLARATION DE LA CLASSE D'OBJET EN DEHORS DE LA CLASSE DE PAGE POUR ÉVITER LES ERREURS DE TYPE
 class EnginDePeche {
   final String codeEngin;
   String nomLocal;
@@ -49,18 +49,18 @@ class UniteDePechePage extends StatefulWidget {
 
 class _UniteDePechePageState extends State<UniteDePechePage>
     with SingleTickerProviderStateMixin {
+  static const List<String> _typeCoqueOptions = ['Bois', 'Resine'];
+
   late final Map<String, dynamic> data;
   final LekFormService _service = LekFormService();
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers: a) Barque
   final _matriculeCtrl = TextEditingController();
   final _longueurBarqueCtrl = TextEditingController();
   final _puissanceCtrl = TextEditingController();
-  final _typeCoqueCtrl = TextEditingController();
+  String? _selectedTypeCoque;
   final _anneeAchatCtrl = TextEditingController();
 
-  // Controllers: b) Activité
   final _dureeMareeCtrl = TextEditingController();
   final Map<String, TextEditingController> _sortiesControllers = {
     'Janvier': TextEditingController(),
@@ -76,9 +76,8 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     'Novembre': TextEditingController(),
     'Décembre': TextEditingController(),
   };
-  double _moyenneSorties = 0.0;
+  int _sommeSorties = 0;
 
-  // Controllers: c) Caractéristiques de l'engin
   final _filetsDroitsLongCtrl = TextEditingController();
   final _filetsDroitsHautCtrl = TextEditingController();
   final _filetsDroitsMailleCentCtrl = TextEditingController();
@@ -114,28 +113,30 @@ class _UniteDePechePageState extends State<UniteDePechePage>
   void initState() {
     super.initState();
     data = widget.data;
- 
-    // Chargement Barque
+
     _matriculeCtrl.text = (data['unité_barque_matricule'] ?? '').toString();
     _longueurBarqueCtrl.text = (data['unité_barque_longueur'] ?? '').toString();
     _puissanceCtrl.text = (data['unité_barque_puissance'] ?? '').toString();
-    _typeCoqueCtrl.text = (data['unité_barque_type_coque'] ?? '').toString();
+
+    final savedCoque = (data['unité_barque_type_coque'] ?? '').toString().trim();
+    if (_typeCoqueOptions.contains(savedCoque)) {
+      _selectedTypeCoque = savedCoque;
+    }
+
     _anneeAchatCtrl.text = (data['unité_barque_annee_achat'] ?? '').toString();
 
-    // Chargement Activité
     _dureeMareeCtrl.text = (data['unité_activite_duree_maree'] ?? '').toString();
 
-    if (data['unité_sorties_2025'] != null) {
-      final Map<dynamic, dynamic> savedSorties = data['unité_sorties_2025'];
+    final Map<dynamic, dynamic>? savedSorties = data['sorties_2025'] ?? data['unité_sorties_2025'];
+    if (savedSorties != null) {
       savedSorties.forEach((mois, valeur) {
         if (_sortiesControllers.containsKey(mois)) {
           _sortiesControllers[mois]!.text = valeur.toString();
         }
       });
     }
-    _calculerMoyenneSorties();
+    _calculerSommeSorties();
 
-    // Initialisation Liste Engins
     _listeEngins = [
       EnginDePeche(codeEngin: 'Senne tournante coulissante: PS'),
       EnginDePeche(codeEngin: 'Chaluts : CH (Crevettier, Mediterranien, GOV, pélagique)'),
@@ -154,18 +155,17 @@ class _UniteDePechePageState extends State<UniteDePechePage>
       final List<dynamic> savedEngins = data['engins_peche'];
       for (int i = 0; i < _listeEngins.length && i < savedEngins.length; i++) {
         final saved = savedEngins[i] as Map<String, dynamic>;
-        _listeEngins[i].nomLocal = saved['unité_nom_Local'] ?? '';
-        _listeEngins[i].partEnPourcent = (saved['unité_part_En_Pourcent'] as num?)?.toDouble();
-        _listeEngins[i].especeCibles = saved['unité_espece_Cibles'] ?? '';
-        _listeEngins[i].especeAccessoires = saved['unité_espece_Accessoires'] ?? '';
-        if (saved['unité_saison_Utilisation'] != null) {
-          _listeEngins[i].saisonUtilisation = List<bool>.from(saved['unité_saison_Utilisation']);
+        _listeEngins[i].nomLocal = saved['nomLocal'] ?? saved['unité_nom_Local'] ?? '';
+        _listeEngins[i].partEnPourcent = (saved['partEnPourcent'] ?? saved['unité_part_En_Pourcent'] as num?)?.toDouble();
+        _listeEngins[i].especeCibles = saved['especeCibles'] ?? saved['unité_espece_Cibles'] ?? '';
+        _listeEngins[i].especeAccessoires = saved['especeAccessoires'] ?? saved['unité_espece_Accessoires'] ?? '';
+        if (saved['saisonUtilisation'] != null || saved['unité_saison_Utilisation'] != null) {
+          _listeEngins[i].saisonUtilisation = List<bool>.from(saved['saisonUtilisation'] ?? saved['unité_saison_Utilisation']);
         }
-        _listeEngins[i].nbHeurePecheEffective = saved['unité_nbHeure_Peche_Effective'] as int?;
+        _listeEngins[i].nbHeurePecheEffective = (saved['nbHeurePecheEffective'] ?? saved['unité_nbHeure_Peche_Effective']) as int?;
       }
     }
 
-    // Chargement Caractéristiques Engins
     _filetsDroitsLongCtrl.text = (data['unité_fd_longueur'] ?? '').toString();
     _filetsDroitsHautCtrl.text = (data['unité_fd_hauteur'] ?? '').toString();
     _filetsDroitsMailleCentCtrl.text = (data['unité_fd_maille_centrale'] ?? '').toString();
@@ -204,7 +204,6 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     _matriculeCtrl.dispose();
     _longueurBarqueCtrl.dispose();
     _puissanceCtrl.dispose();
-    _typeCoqueCtrl.dispose();
     _anneeAchatCtrl.dispose();
     _dureeMareeCtrl.dispose();
     for (var ctrl in _sortiesControllers.values) {
@@ -236,21 +235,19 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     super.dispose();
   }
 
-  void _calculerMoyenneSorties() {
+  void _calculerSommeSorties() {
     int totalJours = 0;
-    int moisRenseignes = 0;
 
     _sortiesControllers.forEach((mois, ctrl) {
       final valeur = int.tryParse(ctrl.text);
       if (valeur != null) {
         totalJours += valeur;
-        moisRenseignes++;
       }
     });
 
     setState(() {
-      _moyenneSorties = moisRenseignes > 0 ? totalJours / moisRenseignes : 0.0;
-      data['moyenne_sorties_2025'] = _moyenneSorties;
+      _sommeSorties = totalJours;
+      data['total_sorties_2025'] = _sommeSorties;
     });
   }
 
@@ -278,23 +275,32 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     );
     if (picked != null) {
       setState(() => _anneeAchatCtrl.text = picked.year.toString());
-      data['barque_annee_achat'] = picked.year.toString();
+      data['unité_barque_annee_achat'] = picked.year.toString();
       _service.scheduleFullDataSave(widget.formId, data);
     }
   }
 
   InputDecoration _dec(String label, {String? suffix}) => InputDecoration(
-    labelText: label,
-    suffixText: suffix,
-    hintText: 'Saisir...',
-    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-    filled: true,
-    fillColor: const Color(0xFFF8FBFF),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2)),
-  );
+        labelText: label,
+        suffixText: suffix,
+        hintText: 'Saisir...',
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+        filled: true,
+        fillColor: const Color(0xFFF8FBFF),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF00D9D9), width: 2),
+        ),
+      );
 
   Widget _field({
     required TextEditingController controller,
@@ -305,7 +311,9 @@ class _UniteDePechePageState extends State<UniteDePechePage>
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      keyboardType: numeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
       decoration: _dec(label, suffix: suffix),
       onChanged: (v) {
         data[key] = v;
@@ -322,7 +330,11 @@ class _UniteDePechePageState extends State<UniteDePechePage>
         children: [
           Text(
             title,
-            style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold, fontSize: 16),
+            style: const TextStyle(
+              color: Color(0xFF1E3A8A),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
           const Divider(color: Color(0xFF00D9D9), thickness: 1.5, endIndent: 200),
         ],
@@ -335,7 +347,11 @@ class _UniteDePechePageState extends State<UniteDePechePage>
       padding: const EdgeInsets.only(top: 10, bottom: 6),
       child: Text(
         title,
-        style: const TextStyle(color: Color(0xFF2D4BA8), fontWeight: FontWeight.w700, fontSize: 14),
+        style: const TextStyle(
+          color: Color(0xFF2D4BA8),
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
       ),
     );
   }
@@ -343,15 +359,34 @@ class _UniteDePechePageState extends State<UniteDePechePage>
   void _goNext() {
     _sauvegarderTableau();
     _sauvegarderSorties();
-    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Données enregistrées avec succès !')),
-    );
+    _service.updateFormData(widget.formId, data, stepCompleted: 3);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DynamiqueDuCrabePage(formId: widget.formId, data: data),
       ),
+    );
+  }
+
+  void _goBack() {
+    _sauvegarderTableau();
+    _sauvegarderSorties();
+    _service.updateFormData(widget.formId, data, stepCompleted: 2);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InfoPage(formId: widget.formId, data: data),
+      ),
+    );
+  }
+
+  void _goToLekHome() {
+    _sauvegarderTableau();
+    _sauvegarderSorties();
+    _service.updateFormData(widget.formId, data, stepCompleted: 3);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => LekHome(formId: widget.formId)),
+      (route) => route.isFirst,
     );
   }
 
@@ -389,7 +424,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: _goToLekHome,
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                       const Text(
@@ -420,16 +455,37 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              
-                              // ================= a) BARQUE =================
                               _sectionTitle("a) Barque"),
-                              _field(controller: _matriculeCtrl, label: 'Matricule', key: 'barque_matricule'),
+                              _field(controller: _matriculeCtrl, label: 'Matricule', key: 'unité_barque_matricule'),
                               const SizedBox(height: 10),
-                              _field(controller: _longueurBarqueCtrl, label: 'Longueur', key: 'barque_longueur', numeric: true, suffix: 'm'),
+                              _field(controller: _longueurBarqueCtrl, label: 'Longueur', key: 'unité_barque_longueur', numeric: true, suffix: 'm'),
                               const SizedBox(height: 10),
-                              _field(controller: _puissanceCtrl, label: 'Puissance', key: 'barque_puissance', numeric: true, suffix: 'chx'),
+                              _field(controller: _puissanceCtrl, label: 'Puissance', key: 'unité_barque_puissance', numeric: true, suffix: 'chx'),
                               const SizedBox(height: 10),
-                              _field(controller: _typeCoqueCtrl, label: 'Type de coque barque', key: 'barque_type_coque'),
+                              
+                              // DROPDOWN TYPE DE COQUE
+                              DropdownButtonFormField<String>(
+                                initialValue: _selectedTypeCoque,
+                                isExpanded: true,
+                                decoration: _dec('Type de coque barque'),
+                                hint: const Text('Choisir...'),
+                                items: _typeCoqueOptions
+                                    .map(
+                                      (item) => DropdownMenuItem<String>(
+                                        value: item,
+                                        child: Text(item),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    _selectedTypeCoque = newValue;
+                                  });
+                                  data['unité_barque_type_coque'] = newValue ?? '';
+                                  _service.scheduleFullDataSave(widget.formId, data);
+                                },
+                              ),
+                              
                               const SizedBox(height: 10),
                               TextFormField(
                                 controller: _anneeAchatCtrl,
@@ -440,7 +496,6 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                                 ),
                               ),
 
-                              // ================= b) ACTIVITÉ =================
                               _sectionTitle("b) Activité"),
                               const SizedBox(height: 5),
                               SizedBox(
@@ -545,9 +600,8 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                                 ),
                               ),
                               const SizedBox(height: 15),
-                              _field(controller: _dureeMareeCtrl, label: "Durée moyenne d'une Marée", key: 'activite_duree_maree', numeric: true, suffix: "en nbre d'heures"),
-                              
-                              // ================= SORTIES EN MER EN 2025 =================
+                              _field(controller: _dureeMareeCtrl, label: "Durée moyenne d'une Marée", key: 'unité_activite_duree_maree', numeric: true, suffix: "en nbre d'heures"),
+
                               const SizedBox(height: 15),
                               _subSectionTitle("Nombre de sorties en mer en 2025"),
                               Container(
@@ -577,7 +631,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                                           style: const TextStyle(fontSize: 13),
                                           decoration: _dec(mois),
                                           onChanged: (v) {
-                                            _calculerMoyenneSorties();
+                                            _calculerSommeSorties();
                                             _sauvegarderSorties();
                                           },
                                         );
@@ -595,11 +649,11 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           const Text(
-                                            "Moy nb jours (Moyenne):",
+                                            "Somme total des jours :",
                                             style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
                                           ),
                                           Text(
-                                            "${_moyenneSorties.toStringAsFixed(2)} jours",
+                                            "$_sommeSorties jours",
                                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.deepOrange),
                                           ),
                                         ],
@@ -609,102 +663,88 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                                 ),
                               ),
 
-                              // ================= c) CARACTÉRISTIQUES DES ENGINS =================
                               _sectionTitle("c) Caractéristique de l'engin"),
-                              
+
                               _subSectionTitle("c-1) Filets"),
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text("c-1.1 Filets droits (maillant, trémails, ...)", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black12)),
+                                    const Text("c-1.1 Filets droits (maillant, trémails, ...)", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black45)),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsLongCtrl, label: 'Longueur', key: 'fd_longueur', numeric: true, suffix: 'm'),
+                                    _field(controller: _filetsDroitsLongCtrl, label: 'Longueur', key: 'unité_fd_longueur', numeric: true, suffix: 'm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsHautCtrl, label: 'Hauteur', key: 'fd_hauteur', numeric: true, suffix: 'm'),
+                                    _field(controller: _filetsDroitsHautCtrl, label: 'Hauteur', key: 'unité_fd_hauteur', numeric: true, suffix: 'm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsMailleCentCtrl, label: 'Maille/Maille centrale', key: 'fd_maille_centrale', numeric: true, suffix: 'mm'),
+                                    _field(controller: _filetsDroitsMailleCentCtrl, label: 'Maille/Maille centrale', key: 'unité_fd_maille_centrale', numeric: true, suffix: 'mm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsMailleExtCtrl, label: 'Maille extérieure', key: 'fd_maille_exterieure', numeric: true, suffix: 'mm'),
+                                    _field(controller: _filetsDroitsMailleExtCtrl, label: 'Maille extérieure', key: 'unité_fd_maille_exterieure', numeric: true, suffix: 'mm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsNbPiecesCtrl, label: 'Nbre de pièces par armement', key: 'fd_nb_pieces', numeric: true),
+                                    _field(controller: _filetsDroitsNbPiecesCtrl, label: 'Nbre de pièces par armement', key: 'unité_fd_nb_pieces', numeric: true),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsDroitsNbArmementsCtrl, label: 'Nbre armements', key: 'fd_nb_armements', numeric: true),
-                                    
+                                    _field(controller: _filetsDroitsNbArmementsCtrl, label: 'Nbre armements', key: 'unité_fd_nb_armements', numeric: true),
+
                                     const SizedBox(height: 14),
-                                    const Text("c-1.2 Filets Tournants", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black12)),
+                                    const Text("c-1.2 Filets Tournants", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black45)),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsTournantsLongCtrl, label: 'Longueur', key: 'ft_longueur', numeric: true, suffix: 'm'),
+                                    _field(controller: _filetsTournantsLongCtrl, label: 'Longueur', key: 'unité_ft_longueur', numeric: true, suffix: 'm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsTournantsHautCtrl, label: 'Hauteur (chute)', key: 'ft_hauteur', numeric: true, suffix: 'm'),
+                                    _field(controller: _filetsTournantsHautCtrl, label: 'Hauteur (chute)', key: 'unité_ft_hauteur', numeric: true, suffix: 'm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsTournantsMailleAileCtrl, label: 'Maille aile', key: 'ft_maille_aile', numeric: true, suffix: 'mm'),
+                                    _field(controller: _filetsTournantsMailleAileCtrl, label: 'Maille aile', key: 'unité_ft_maille_aile', numeric: true, suffix: 'mm'),
                                     const SizedBox(height: 6),
-                                    _field(controller: _filetsTournantsMaillePocheCtrl, label: 'Maille poche', key: 'ft_maille_poche', numeric: true, suffix: 'mm'),
+                                    _field(controller: _filetsTournantsMaillePocheCtrl, label: 'Maille poche', key: 'unité_ft_maille_poche', numeric: true, suffix: 'mm'),
                                   ],
                                 ),
                               ),
 
                               _subSectionTitle("c-2) Pièges (gargoulette, pierre...)"),
-                              _field(controller: _piegesDiametreCtrl, label: 'Diamètre', key: 'pieges_diametre', numeric: true, suffix: 'cm'),
+                              _field(controller: _piegesDiametreCtrl, label: 'Diamètre', key: 'unité_pieges_diametre', numeric: true, suffix: 'cm'),
                               const SizedBox(height: 6),
-                              _field(controller: _piegesNbreCtrl, label: 'Nbre', key: 'pieges_nbre', numeric: true),
+                              _field(controller: _piegesNbreCtrl, label: 'Nbre', key: 'unité_pieges_nbre', numeric: true),
 
                               _subSectionTitle("c-3) Nasses"),
-                              _field(controller: _nassesDiametreCtrl, label: 'Diamètre', key: 'nasses_diametre', numeric: true, suffix: 'cm'),
+                              _field(controller: _nassesDiametreCtrl, label: 'Diamètre', key: 'unité_nasses_diametre', numeric: true, suffix: 'cm'),
                               const SizedBox(height: 6),
-                              _field(controller: _nassesHauteurCtrl, label: 'Hauteur', key: 'nasses_hauteur', numeric: true, suffix: 'cm'),
+                              _field(controller: _nassesHauteurCtrl, label: 'Hauteur', key: 'unité_nasses_hauteur', numeric: true, suffix: 'cm'),
                               const SizedBox(height: 6),
-                              _field(controller: _nassesOuvertureCtrl, label: 'Ouverture', key: 'nasses_ouverture', numeric: true, suffix: 'cm'),
+                              _field(controller: _nassesOuvertureCtrl, label: 'Ouverture', key: 'unité_nasses_ouverture', numeric: true, suffix: 'cm'),
                               const SizedBox(height: 6),
-                              _field(controller: _nassesMailleCtrl, label: 'Maille', key: 'nasses_maille', numeric: true, suffix: 'mm'),
+                              _field(controller: _nassesMailleCtrl, label: 'Maille', key: 'unité_nasses_maille', numeric: true, suffix: 'mm'),
                               const SizedBox(height: 6),
-                              _field(controller: _nassesNbreCtrl, label: 'Nbre', key: 'nasses_nbre', numeric: true),
+                              _field(controller: _nassesNbreCtrl, label: 'Nbre', key: 'unité_nasses_nbre', numeric: true),
 
                               _subSectionTitle("c-4) Chalut"),
-                              _field(controller: _chalutLongRalingueCtrl, label: 'Longueur ralingue inférieure', key: 'chalut_longueur_ralingue', numeric: true, suffix: 'm'),
+                              _field(controller: _chalutLongRalingueCtrl, label: 'Longueur ralingue inférieure', key: 'unité_chalut_longueur_ralingue', numeric: true, suffix: 'm'),
                               const SizedBox(height: 6),
-                              _field(controller: _chalutOuvVertCtrl, label: 'Ouverture Verticale', key: 'chalut_ouverture_verticale', numeric: true, suffix: 'm'),
+                              _field(controller: _chalutOuvVertCtrl, label: 'Ouverture Verticale', key: 'unité_chalut_ouverture_verticale', numeric: true, suffix: 'm'),
                               const SizedBox(height: 6),
-                              _field(controller: _chalutOuvHorizCtrl, label: 'Ouverture horizontale', key: 'chalut_ouverture_horizontale', numeric: true, suffix: 'm'),
+                              _field(controller: _chalutOuvHorizCtrl, label: 'Ouverture horizontale', key: 'unité_chalut_ouverture_horizontale', numeric: true, suffix: 'm'),
                               const SizedBox(height: 6),
-                              _field(controller: _chalutMailleCulCtrl, label: 'Maille de cul de chalut', key: 'chalut_maille_cul', numeric: true, suffix: 'mm'),
+                              _field(controller: _chalutMailleCulCtrl, label: 'Maille de cul de chalut', key: 'unité_chalut_maille_cul', numeric: true, suffix: 'mm'),
                               const SizedBox(height: 6),
-                              _field(controller: _chalutTypeCtrl, label: 'Type de chalut', key: 'chalut_type'),
+                              _field(controller: _chalutTypeCtrl, label: 'Type de chalut', key: 'unité_chalut_type'),
 
                               const SizedBox(height: 30),
 
-                              // Boutons
                               Row(
                                 children: [
                                   Expanded(
                                     child: _OutlineButton(
-                                    text: 'Précédent',
-                                    icon: Icons.arrow_back,
-                                    onPressed: () {
-                                    _service.updateFormData(widget.formId, data, stepCompleted: 2);
-                                    Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => InfoPage(formId: widget.formId, data:data),
-                                      ),
-                                   );}
-                                   ),
+                                      text: 'Précédent',
+                                      icon: Icons.arrow_back,
+                                      onPressed: _goBack,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(colors: [Color(0xFF00D9D9), Color(0xFF00B8B8)]),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: _PrimaryGradientButton(
-                              text: 'Suivant',
-                              icon: Icons.arrow_forward,
-                              onPressed: _goNext)))
-                                    
-                                  
+                                    child: _PrimaryGradientButton(
+                                      text: 'Suivant',
+                                      icon: Icons.arrow_forward,
+                                      onPressed: _goNext,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -722,6 +762,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     );
   }
 }
+
 class _PrimaryGradientButton extends StatelessWidget {
   final String text;
   final IconData icon;
@@ -777,6 +818,7 @@ class _PrimaryGradientButton extends StatelessWidget {
     );
   }
 }
+
 class _OutlineButton extends StatelessWidget {
   final String text;
   final IconData icon;
