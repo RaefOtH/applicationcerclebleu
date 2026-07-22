@@ -28,9 +28,9 @@ class _EspeceControllers {
 
   String? typeFond;
   String? abondance5ans;
-  String? saisonForteAbondance;
-  String? saisonReproduction;
-  String? presenceJuveniles;
+  List<String> saisonForteAbondance = [];
+  List<String> saisonReproduction = [];
+  List<String> presenceJuveniles = [];
   String? evolutionQuantites;
   String? tendance;
 
@@ -50,9 +50,9 @@ class _EspeceControllers {
 
     typeFond = _nullIfEmpty(data['${prefix}_typeFond']);
     abondance5ans = _nullIfEmpty(data['${prefix}_abondance5ans']);
-    saisonForteAbondance = _nullIfEmpty(data['${prefix}_saisonForteAbondance']);
-    saisonReproduction = _nullIfEmpty(data['${prefix}_saisonReproduction']);
-    presenceJuveniles = _nullIfEmpty(data['${prefix}_presenceJuveniles']);
+    saisonForteAbondance = _listFromCsv(data['${prefix}_saisonForteAbondance']);
+    saisonReproduction = _listFromCsv(data['${prefix}_saisonReproduction']);
+    presenceJuveniles = _listFromCsv(data['${prefix}_presenceJuveniles']);
     evolutionQuantites = _nullIfEmpty(data['${prefix}_evolutionQuantites']);
     tendance = _nullIfEmpty(data['${prefix}_tendance']);
   }
@@ -60,6 +60,12 @@ class _EspeceControllers {
   static String? _nullIfEmpty(dynamic v) {
     final s = (v ?? '').toString().trim();
     return s.isEmpty ? null : s;
+  }
+
+  static List<String> _listFromCsv(dynamic v) {
+    final str = (v ?? '').toString().trim();
+    if (str.isEmpty) return [];
+    return str.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
   void dispose() {
@@ -236,6 +242,111 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
     );
   }
 
+  Widget _multiSelectField({
+    required String label,
+    required List<_OptionItem> options,
+    required List<String> selectedValues,
+    required String dataKey,
+    required ValueChanged<List<String>> onChanged,
+    String? helperText,
+  }) {
+    final displayText = selectedValues.isEmpty
+        ? 'Choisir...'
+        : options
+            .where((o) => selectedValues.contains(o.code))
+            .map((o) => o.code)
+            .join(', ');
+
+    return InkWell(
+      onTap: () async {
+        final List<String> tempSelected = List.from(selectedValues);
+        final result = await showDialog<List<String>>(
+          context: context,
+          builder: (BuildContext context) {
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
+                return AlertDialog(
+                  title: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Color(0xFF1E3A8A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: options.map((option) {
+                        final isChecked = tempSelected.contains(option.code);
+                        return CheckboxListTile(
+                          title: Text(option.label),
+                          value: isChecked,
+                          activeColor: const Color(0xFF00D9D9),
+                          onChanged: (bool? checked) {
+                            setDialogState(() {
+                              if (checked == true) {
+                                tempSelected.add(option.code);
+                              } else {
+                                tempSelected.remove(option.code);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      child: const Text('Annuler'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00D9D9),
+                      ),
+                      onPressed: () => Navigator.pop(context, tempSelected),
+                      child: const Text(
+                        'Valider',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+
+        if (result != null) {
+          onChanged(result);
+          _save(dataKey, result.join(', '));
+        }
+      },
+      child: InputDecorator(
+        decoration: _dec(label, helperText: helperText),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                displayText,
+                style: TextStyle(
+                  color: selectedValues.isEmpty
+                      ? const Color(0xFF94A3B8)
+                      : Colors.black87,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down, color: Color(0xFF1E3A8A)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _sectionHeader(String text) {
     return Container(
       width: double.infinity,
@@ -355,31 +466,31 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
             ),
           ],
           _gap(),
-          _dropdownField(
+          _multiSelectField(
             label: 'Saison de plus forte abondance',
             options: _saisonOptions,
-            value: c.saisonForteAbondance,
+            selectedValues: c.saisonForteAbondance,
             dataKey: '${c.prefix}_saisonForteAbondance',
             onChanged: (v) => setState(() => c.saisonForteAbondance = v),
-            helperText: 'H / P / E / A',
+            helperText: 'H / P / E / A (Choix multiples)',
           ),
           _gap(),
-          _dropdownField(
+          _multiSelectField(
             label: 'Saison de reproduction',
             options: _saisonOptions,
-            value: c.saisonReproduction,
+            selectedValues: c.saisonReproduction,
             dataKey: '${c.prefix}_saisonReproduction',
             onChanged: (v) => setState(() => c.saisonReproduction = v),
-            helperText: 'H / P / E / A',
+            helperText: 'H / P / E / A (Choix multiples)',
           ),
           _gap(),
-          _dropdownField(
+          _multiSelectField(
             label: 'Présence de juvéniles',
             options: _saisonOptions,
-            value: c.presenceJuveniles,
+            selectedValues: c.presenceJuveniles,
             dataKey: '${c.prefix}_presenceJuveniles',
             onChanged: (v) => setState(() => c.presenceJuveniles = v),
-            helperText: 'H / P / E / A',
+            helperText: 'H / P / E / A (Choix multiples)',
           ),
           _gap(),
           _textField(
@@ -421,7 +532,7 @@ class _DynamiqueDuCrabePageState extends State<DynamiqueDuCrabePage>
               controller: c.zonePlusAffecteeCtrl,
               label: 'Zone la plus affectée',
               dataKey: '${c.prefix}_zonePlusAffectee',
-              helperText: 'Nom / carte (+/-)',
+              helperText: 'Nom / carte',
             ),
           ],
         ],

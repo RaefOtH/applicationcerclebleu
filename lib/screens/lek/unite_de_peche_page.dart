@@ -127,7 +127,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
 
     _dureeMareeCtrl.text = (data['unité_activite_duree_maree'] ?? '').toString();
 
-    final Map<dynamic, dynamic>? savedSorties = data['sorties_2025'] ?? data['unité_sorties_2025'];
+    final Map<dynamic, dynamic>? savedSorties = data['sorties_année_précédente'] ?? data['unité_sorties_année_précédente'];
     if (savedSorties != null) {
       savedSorties.forEach((mois, valeur) {
         if (_sortiesControllers.containsKey(mois)) {
@@ -247,7 +247,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
 
     setState(() {
       _sommeSorties = totalJours;
-      data['total_sorties_2025'] = _sommeSorties;
+      data['total_sorties_année_précédente'] = _sommeSorties;
     });
   }
 
@@ -256,7 +256,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
     _sortiesControllers.forEach((mois, ctrl) {
       sortiesMap[mois] = int.tryParse(ctrl.text) ?? 0;
     });
-    data['sorties_2025'] = sortiesMap;
+    data['sorties_année_précédente'] = sortiesMap;
     _service.scheduleFullDataSave(widget.formId, data);
   }
 
@@ -603,7 +603,7 @@ class _UniteDePechePageState extends State<UniteDePechePage>
                               _field(controller: _dureeMareeCtrl, label: "Durée moyenne d'une Marée", key: 'unité_activite_duree_maree', numeric: true, suffix: "en nbre d'heures"),
 
                               const SizedBox(height: 15),
-                              _subSectionTitle("Nombre de sorties en mer en 2025"),
+                              _subSectionTitle("Nombre de sorties en mer en année_précédente"),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(

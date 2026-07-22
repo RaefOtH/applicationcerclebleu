@@ -40,7 +40,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
 
   static const List<_OptionItem> _etatGestionOptions = [
     _OptionItem('Bonne', 'Bonne'),
-    _OptionItem('±', '±'),
+    _OptionItem('plus ou moins', 'plus ou moins'),
     _OptionItem('Inexistante', 'Inexistante'),
   ];
 
@@ -52,7 +52,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
 
   static const List<_OptionItem> _etatMilieuOptions = [
     _OptionItem('Bon', 'Bon'),
-    _OptionItem('±', '±'),
+    _OptionItem('plus ou moins', 'plus ou moins'),
     _OptionItem('Mauvais', 'Mauvais'),
   ];
 
@@ -343,7 +343,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             value: _etatGestionCrabe,
                             dataKey: 'etatlieux_etatGestionCrabe',
                             onChanged: (v) => setState(() => _etatGestionCrabe = v),
-                            helperText: 'Bonne / ± / inexistante',
+                            helperText: 'Bonne / plus ou moins / inexistante',
                           ),
                           _gap(),
                           _dropdownField(
@@ -429,7 +429,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             value: _etatMilieuEaux,
                             dataKey: 'etatlieux_etatMilieuEaux',
                             onChanged: (v) => setState(() => _etatMilieuEaux = v),
-                            helperText: 'Bon / ± / mauvais',
+                            helperText: 'Bon / plus ou moins / mauvais',
                           ),
                           _gap(),
                           _dropdownField(
@@ -438,7 +438,7 @@ class _EtatDesLieuxPageState extends State<EtatDesLieuxPage>
                             value: _etatFond,
                             dataKey: 'etatlieux_etatFond',
                             onChanged: (v) => setState(() => _etatFond = v),
-                            helperText: 'Bon / ± / mauvais',
+                            helperText: 'Bon / plus ou moins / mauvais',
                           ),
                           _gap(),
                           _dropdownField(

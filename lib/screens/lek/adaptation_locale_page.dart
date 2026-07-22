@@ -58,10 +58,14 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
   final TextEditingController _nouveauxEnginsCtrl = TextEditingController();
   final TextEditingController _changementZoneCtrl = TextEditingController();
 
+  // Nouveaux champs pour le changement de temps d'immersion
+  String? _tempsImmersionOuiNon;
+  final TextEditingController _tempsImmersionHeuresCtrl = TextEditingController();
+
   String? _changementCalendrierOuiNon;
   final TextEditingController _especesCiblesCtrl = TextEditingController();
 
-  // Modification : passage à une liste pour choix multiples
+  // Liste pour choix multiples des saisons
   List<String> _saisonsPeche = [];
   final TextEditingController _autresPreciserCtrl = TextEditingController();
 
@@ -81,6 +85,10 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     _enginsHorsUsageNomCtrl.text = (data['adaptation_enginsHorsUsage_nom'] ?? '').toString();
     _nouveauxEnginsCtrl.text = (data['adaptation_nouveauxEngins'] ?? '').toString();
     _changementZoneCtrl.text = (data['adaptation_changementZone'] ?? '').toString();
+
+    // Initialisation des données du temps d'immersion
+    _tempsImmersionOuiNon = _nullIfEmpty(data['adaptation_tempsImmersion_ouiNon']);
+    _tempsImmersionHeuresCtrl.text = (data['adaptation_tempsImmersion_heures'] ?? '').toString();
 
     _changementCalendrierOuiNon = _nullIfEmpty(data['adaptation_changementCalendrier_ouiNon']);
     _especesCiblesCtrl.text = (data['adaptation_especesCibles'] ?? '').toString();
@@ -115,6 +123,7 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     _enginsHorsUsageNomCtrl.dispose();
     _nouveauxEnginsCtrl.dispose();
     _changementZoneCtrl.dispose();
+    _tempsImmersionHeuresCtrl.dispose();
     _especesCiblesCtrl.dispose();
     _autresPreciserCtrl.dispose();
     _waveController.dispose();
@@ -166,11 +175,15 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     required String dataKey,
     String? helperText,
     bool multiline = false,
+    bool numeric = false,
   }) {
     return TextFormField(
       controller: controller,
       minLines: multiline ? 3 : 1,
       maxLines: multiline ? 5 : 1,
+      keyboardType: numeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
       decoration: _dec(label, helperText: helperText),
       onChanged: (v) => _save(dataKey, v),
     );
@@ -204,7 +217,6 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
     );
   }
 
-  // NOUVEAU: Widget de sélection multiple avec des chips
   Widget _multiSelectFilterChips({
     required String label,
     required List<_OptionItem> options,
@@ -473,6 +485,26 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             dataKey: 'adaptation_changementZone',
                             helperText: 'Nom / carte',
                           ),
+                          _gap(),
+                          // Ajout du champ : Changement de temps d'immersion
+                          _dropdownField(
+                            label: "Changement de temps d'immersion",
+                            options: _ouiNonOptions,
+                            value: _tempsImmersionOuiNon,
+                            dataKey: 'adaptation_tempsImmersion_ouiNon',
+                            onChanged: (v) => setState(() => _tempsImmersionOuiNon = v),
+                            helperText: 'oui / non',
+                          ),
+                          if (_tempsImmersionOuiNon == 'Oui') ...[
+                            _gap(),
+                            _textField(
+                              controller: _tempsImmersionHeuresCtrl,
+                              label: "Nombre d'heures",
+                              dataKey: 'adaptation_tempsImmersion_heures',
+                              helperText: "Entrer le nombre d'heures",
+                              numeric: true,
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -495,7 +527,6 @@ class _AdaptationLocalePageState extends State<AdaptationLocalePage>
                             helperText: 'Nom',
                           ),
                           _gap(),
-                          // Modification ici : Remplacement du Dropdown par le composant MultiSelect
                           _multiSelectFilterChips(
                             label: 'Saison de pêche',
                             options: _saisonOptions,

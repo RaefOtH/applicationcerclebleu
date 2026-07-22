@@ -370,8 +370,8 @@ const lekDataKeys = <String>[""
   'unité_nbHeure_Peche_Effective',                 // Champ numérique : Nombre d'heures de pêche effective
   'unité_saison_Utilisation',                     // Tableau ou chaîne listant l'activation des 12 mois (Janv-Déc)
   'unité_activite_duree_maree',
-  'unité_sorties_2025',
-  'unité_moyenne_sorties_2025',
+  'unité_sorties_année_précédente',
+  'unité_moyenne_sorties_année_précédente',
   'unité_fd_longueur',
   'unité_fd_hauteur',
   'unité_fd_maille_centrale',
