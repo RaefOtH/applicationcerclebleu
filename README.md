@@ -1069,3 +1069,5 @@ Avant une mise en production, les priorités devraient être :
 - [firebase.json](firebase.json)
 - [firestore.indexes.json](firestore.indexes.json)
 - [lib/firebase_options.dart](lib/firebase_options.dart)
+#   C e r c l e - B l e u  
+ 
